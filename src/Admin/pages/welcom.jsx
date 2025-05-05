@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronRight, Sparkles, Info, Facebook, Instagram, Twitter } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function WelcomPage() {
   const [hoveredCard, setHoveredCard] = useState(null);
@@ -52,13 +53,14 @@ export default function WelcomPage() {
                 alt="Employee" 
                 className="w-full h-full object-cover rounded-md"
               />
-              
+               <Link to='/employeelogin'>
               <button className="mt-8 w-full py-4 px-6 bg-gradient-to-r from-[#3498db] to-[#47b4e0] hover:from-[#47b4e0] hover:to-[#3498db] text-white font-medium text-lg rounded-xl flex items-center justify-center group transition-all shadow-xl shadow-[#3498db]/20">
                 <span className="relative z-10 flex items-center">
-                  Je suis un employée
+                Je suis un employée
                   <ChevronRight className="ml-2 w-6 h-6 transition-transform group-hover:translate-x-1" />
                 </span>
               </button>
+              </Link> 
             </div>
           </div>
           
@@ -77,13 +79,14 @@ export default function WelcomPage() {
                 alt="Admin" 
                 className="w-full h-full object-cover rounded-md"
               />
-              
+              <Link to='/adminlogin'>
               <button className="mt-8 w-full py-4 px-6 bg-gradient-to-r from-[#3498db] to-[#47b4e0] hover:from-[#47b4e0] hover:to-[#3498db] text-white font-medium text-lg rounded-xl flex items-center justify-center group transition-all shadow-xl shadow-[#3498db]/20">
                 <span className="relative z-10 flex items-center">
-                  Je suis un admin
+                 Je suis un admin
                   <ChevronRight className="ml-2 w-6 h-6 transition-transform group-hover:translate-x-1" />
                 </span>
               </button>
+              </Link>
             </div>
           </div>
         </div>
