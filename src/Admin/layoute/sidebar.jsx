@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Home, Users, Clock, Calendar, FileText, BookOpen, FileCheck, Repeat, File } from 'lucide-react';
-
+import { Link } from 'react-router-dom';
 export default function Sidebar() {
 const [activePage, setActivePage] = useState('dashboard');
   
 const menuItems = [
-    { id: 'dashboard', icon: <Home size={18} />, text: 'Dashboard' },
-    { id: 'employes', icon: <Users size={18} />, text: 'Les employés' },
-    { id: 'presences', icon: <Clock size={18} />, text: 'Présences' },
-    { id: 'conges', icon: <Calendar size={18} />, text: 'Congés' },
+    { id: 'admin', icon: <Home size={18} />, text: 'Dashboard' },
+    { id: 'admin/employes', icon: <Users size={18} />, text: 'Les employés' },
+    { id: 'admin/presences', icon: <Clock size={18} />, text: 'Présences' },
+    { id: 'admin/conges', icon: <Calendar size={18} />, text: 'Congés' },
     { id: 'formation', icon: <BookOpen size={18} />, text: 'Formation' },
     { id: 'paie', icon: <FileText size={18} />, text: 'Fiches de paie' },
     { id: 'recrutement', icon: <FileCheck size={18} />, text: 'Recrutement' },
@@ -30,6 +30,8 @@ const menuItems = [
       {/* Menu Items */}
       <div className="flex-grow overflow-y-auto">
         {menuItems.map(item => (
+            <Link
+            to={`/${item.id}`}>
           <button
             key={item.id}
             className={`flex items-center gap-3 w-full px-4 py-3 text-left text-sm hover:bg-white/10 transition-colors ${
@@ -40,6 +42,7 @@ const menuItems = [
             <span className="text-white/80">{item.icon}</span>
             <span>{item.text}</span>
           </button>
+          </Link>
         ))}
       </div>
       
