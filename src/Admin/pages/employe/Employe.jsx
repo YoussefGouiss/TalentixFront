@@ -65,7 +65,7 @@ export default function Employee() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState('nom');
+  const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
   const [formAnimation, setFormAnimation] = useState(false);
   
@@ -588,6 +588,23 @@ export default function Employee() {
                             />
                           )}
                         </div>
+                        
+                      </th>
+                      <th 
+                        className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors hidden md:table-cell"
+                        onClick={() => handleSort('date_entree')}
+                      >
+                        <div className="flex items-center">
+                         Date d'entrée
+                          {sortField === 'date_entree' && (
+                            <ChevronDown 
+                              className={`ml-1 w-4 h-4 transition-transform duration-200 ${
+                                sortDirection === 'desc' ? 'transform rotate-180' : ''
+                              }`} 
+                            />
+                          )}
+                        </div>
+                        
                       </th>
                       <th 
                         className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors hidden lg:table-cell"
@@ -631,6 +648,7 @@ export default function Employee() {
                           <td className="py-3 px-4 hidden md:table-cell truncate max-w-xs">{employee.email}</td>
                           <td className="py-3 px-4 hidden lg:table-cell">{employee.telephone}</td>
                           <td className="py-3 px-4 hidden md:table-cell">{employee.poste}</td>
+                          <td className="py-3 px-4 hidden md:table-cell">{employee.date_entree}</td>
                           <td className="py-3 px-4 hidden lg:table-cell">
                             <span className="font-medium">{Number(employee.salaire).toLocaleString()}€</span>
                           </td>
