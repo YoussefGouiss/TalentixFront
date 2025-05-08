@@ -8,14 +8,15 @@ import DashbordAdmin from './Admin/pages/Dashbord/DashbordAdmin';
 import Employee from './Admin/pages/employe/Employe';
 import EProductOrdersPage from './Admin/pages/test';
 import Conges from './Admin/pages/conges/Conges';
-import Presences from './Admin/pages/presences/Presences';
+import Absences from './Admin/pages/employe/presences/Absences';
+import PrivateRoute from './Admin/PrivateRoute';
  const route = createBrowserRouter([
         {
             path :'/',
             element : <WelcomPage/>
         },
         {
-            path :'/adminlogin',
+            path :'/admin/login',
             element : <AdminLogin/>
         },
         {
@@ -28,7 +29,7 @@ import Presences from './Admin/pages/presences/Presences';
         },
         {
             path : 'admin',
-            element : <MainLayoute/>,
+            element :(<PrivateRoute><MainLayoute/></PrivateRoute> ),
             children :[
                 {
                     index : true,
@@ -43,8 +44,8 @@ import Presences from './Admin/pages/presences/Presences';
                     element : <Conges/>
                 },
                 {
-                    path : 'presences',
-                    element : <Presences/>
+                    path : 'Absences',
+                    element : <Absences/>
                 },
             ]
         }

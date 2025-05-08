@@ -1,56 +1,58 @@
-import { useState } from 'react';
-import { Home, Users, Clock, Calendar, FileText, BookOpen, FileCheck, Repeat, File } from 'lucide-react';
-import { Link } from 'react-router-dom';
+
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Users, Clock, Calendar, BookOpen, FileText, FileCheck, File, Briefcase, Home } from "lucide-react";
+
 export default function Sidebar() {
-const [activePage, setActivePage] = useState('dashboard');
-  
-const menuItems = [
-    { id: 'admin', icon: <Home size={18} />, text: 'Dashboard' },
-    { id: 'admin/employes', icon: <Users size={18} />, text: 'Les employés' },
-    { id: 'admin/presences', icon: <Clock size={18} />, text: 'Présences' },
-    { id: 'admin/conges', icon: <Calendar size={18} />, text: 'Congés' },
-    { id: 'formation', icon: <BookOpen size={18} />, text: 'Formation' },
-    { id: 'paie', icon: <FileText size={18} />, text: 'Fiches de paie' },
-    { id: 'recrutement', icon: <FileCheck size={18} />, text: 'Recrutement' },
-    { id: 'attestations', icon: <File size={18} />, text: 'Attestations' },
-    { id: 'mutations', icon: <Repeat size={18} />, text: 'Les mutations internes' },
-    { id: 'contrats', icon: <FileText size={18} />, text: 'Contrats' },
-    { id: 'calendrier', icon: <Calendar size={18} />, text: 'Visualiser le calendrier' }
+  const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
+
+  // Routes for each menu item
+  const menuItems = [
+    {id: "Dashboard", icon: <Home size={20} />, text: "Dashboard", route: "/admin" },
+    {id: "Employés", icon: <Users size={20} />, text: "Employés", route: "/admin/employes" },
+    {id: "Absences", icon: <Clock size={20} />, text: "Absences", route: "/admin/absences" },
+    {id: "Congés", icon: <Calendar size={20} />, text: "Congés", route: "/admin/conges" },
+    {id: "Formation", icon: <BookOpen size={20} />, text: "Formation", route: "/admin/formation" },
+    {id: "paie", icon: <FileText size={20} />, text: "Fiches de paie", route: "/admin/paie" },
+    {id: "Recrutement", icon: <Briefcase size={20} />, text: "Recrutement", route: "/admin/recrutement" },
+    {id: "Attestations", icon: <FileCheck size={20} />, text: "Attestations", route: "/admin/attestations" },
+    {id: "Mutations", icon: <File size={20} />, text: "Mutations", route: "/admin/mutations" },
+    {id: "Contrats", icon: <Briefcase size={20} />, text: "Contrats", route: "/admin/contrats" },
+    {id: "Calendrier", icon: <Calendar size={20} />, text: "Calendrier", route: "/admin/calendrier" },
   ];
-  
+
+
   return (
-    <div className="w-64 bg-gradient-to-b from-cyan-900 to-blue-800 text-white flex flex-col h-screen">
-      {/* Logo */}
-      <div className="p-4 border-b border-blue-700/30 flex justify-center">
-        <div className="flex items-center gap-2">
-        <img src='logo1.png' className='w-full h-50'/>
-        </div>
-      </div>
+    <div className={`bg-cyan-800 text-white ${collapsed ? 'w-16' : 'w-60'} transition-all duration-300 h-screen`}>
+      <div className="p-4 flex items-center justify-between">
+        {!collapsed && (
+          <div className="flex items-center space-x-2">
+            <img src="logo1.png" alt="Logo" className="h-8" />
+          </div>
+        )}
       
-      {/* Menu Items */}
-      <div className="flex-grow overflow-y-auto">
-        {menuItems.map(item => (
+      </div>
+      <div className="mt-8">
+        {menuItems.map((item) => {
+          // Check if this menu item is active based on the current URL path
+          const isActive = location.pathname === item.route;
+          
+          return (
             <Link
-            to={`/${item.id}`}>
-          <button
-            key={item.id}
-            className={`flex items-center gap-3 w-full px-4 py-3 text-left text-sm hover:bg-white/10 transition-colors ${
-              activePage === item.id ? 'bg-white/20 border-l-4 border-white pl-3' : 'text-white/80'
-            }`}
-            onClick={() => setActivePage(item.id)}
-          >
-            <span className="text-white/80">{item.icon}</span>
-            <span>{item.text}</span>
-          </button>
-          </Link>
-        ))}
-      </div>
-      
-      {/* Footer */}
-      <div className="p-3 text-center text-xs text-white/50">
-        Version 30 - Admin Dashboard
-        <br />
-        © 2025 Talentix
+              key={item.id}
+              to={item.route}
+              className={`w-full flex items-center px-4 py-3 cursor-pointer hover:bg-cyan-700 transition-all ${
+                isActive ? "bg-gray-100 text-cyan-600 rounded-l-full ml-5" : "text-white"
+              }`}
+            >
+              <div className="flex items-center">
+                {item.icon}
+                {!collapsed && <span className="ml-4">{item.text}</span>}
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

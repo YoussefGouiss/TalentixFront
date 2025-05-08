@@ -13,7 +13,10 @@ import {
   CheckCircle,
   Activity
 } from 'lucide-react';
-
+const handleLogout = () => {
+  localStorage.removeItem('admin-token'); // ⬅️ مسح التوكن
+  window.location.href = "/admin/login"; // ⬅️ رجّع لصفحة الدخول
+};
 const DashboardAdmin = () => {
   // Sample data
   const stats = [

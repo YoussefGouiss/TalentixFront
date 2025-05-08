@@ -1,42 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Edit, UserPlus, X, Check, Search, ChevronDown, ArrowUpDown, HelpCircle } from 'lucide-react';
-
-// Mock data for testing
-const mockEmployees = [
-  {
-    id: 1,
-    nom: 'Dupont',
-    prenom: 'Jean',
-    email: 'jean.dupont@example.com',
-    telephone: '06 12 34 56 78',
-    poste: 'Développeur Frontend',
-    salaire: 45000,
-    date_entree: '2022-05-15',
-    password: 'hashed_password'
-  },
-  {
-    id: 2,
-    nom: 'Martin',
-    prenom: 'Sophie',
-    email: 'sophie.martin@example.com',
-    telephone: '07 23 45 67 89',
-    poste: 'Développeur Backend',
-    salaire: 48000,
-    date_entree: '2021-09-01',
-    password: 'hashed_password'
-  },
-  {
-    id: 3,
-    nom: 'Dubois',
-    prenom: 'Thomas',
-    email: 'thomas.dubois@example.com',
-    telephone: '06 34 56 78 90',
-    poste: 'Designer UI/UX',
-    salaire: 42000,
-    date_entree: '2023-01-10',
-    password: 'hashed_password'
-  }
-];
+import { Trash2, Edit, UserPlus, X, Check, Search, ChevronDown, HelpCircle, Loader } from 'lucide-react';
 
 // Animated form transition component
 const SlideDown = ({ isVisible, children }) => {
@@ -57,12 +20,12 @@ const Notification = ({ show, message, type }) => {
     <div 
       className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-500 ease-in-out ${
         show 
-          ? 'translate-y-0 opacity-100' 
-          : '-translate-y-12 opacity-0 pointer-events-none'
+        ? 'translate-y-0 opacity-100' 
+        : '-translate-y-12 opacity-0 pointer-events-none'
       } ${
         type === 'success' 
-          ? 'bg-green-100 text-green-800 border-l-4 border-green-500' 
-          : 'bg-red-100 text-red-800 border-l-4 border-red-500'
+        ? 'bg-green-100 text-green-800 border-l-4 border-green-500' 
+        : 'bg-red-100 text-red-800 border-l-4 border-red-500'
       }`}
     >
       <div className="flex items-center">
@@ -96,11 +59,12 @@ const SkeletonLoader = () => {
 export default function Employee() {
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAddButtonLoading, setIsAddButtonLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [nextId, setNextId] = useState(4); // For generating new IDs
   const [sortField, setSortField] = useState('nom');
   const [sortDirection, setSortDirection] = useState('asc');
   const [formAnimation, setFormAnimation] = useState(false);
@@ -122,18 +86,43 @@ export default function Employee() {
     type: 'success'
   });
 
-  // Initialize with mock data
-  useEffect(() => {
-    // Simulate API delay
-    const timer = setTimeout(() => {
-      setEmployees(mockEmployees);
+  // Base API URL
+  const API_URL = 'http://localhost:8000/api';
+
+  // Fetch employees from API
+  const fetchEmployees = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_URL}/employes`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération des données');
+      }
+      
+      const data = await response.json();
+      setEmployees(data.message || []);
+      console.log(data);
+      setError(null);
+    } catch (err) {
+      setError('Impossible de charger les données');
+      console.error('Error fetching employees:', err);
+    } finally {
       setIsLoading(false);
-    }, 1200);
-    
-    return () => clearTimeout(timer);
+    }
+  };
+
+  // Initialize with API data
+  useEffect(() => {
+    fetchEmployees();
   }, []);
 
-  // Handle form input changes with animation
+  // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -147,39 +136,61 @@ export default function Employee() {
     }, 3000);
   };
 
-  // Mock API call
-  const mockApiCall = async (data, delay = 800) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ success: true, data });
-      }, delay);
-    });
-  };
-
-  // Handle form submission
+  // Handle form submission (Create or Update)
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     
+    setIsSubmitting(true);
+    
     try {
       if (editingId) {
-        // Mock update API
-        await mockApiCall(formData);
-        setEmployees(prev => 
-          prev.map(emp => emp.id === editingId ? { ...formData, id: editingId } : emp)
-        );
+        // Update API call
+        const response = await fetch(`${API_URL}/employes/${editingId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Erreur lors de la mise à jour');
+        }
+        
+        await fetchEmployees();
         showNotification('Employé mis à jour avec succès');
       } else {
-        // Mock create API
-        const newId = nextId;
-        await mockApiCall({ ...formData, id: newId });
-        setEmployees(prev => [...prev, { ...formData, id: newId }]);
-        setNextId(nextId + 1);
+        // Create API call
+        const response = await fetch(`${API_URL}/employes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Erreur lors de la création');
+        }
+        
+        await fetchEmployees();
         showNotification('Employé ajouté avec succès');
       }
       
       resetForm();
     } catch (err) {
-      showNotification('Une erreur est survenue', 'error');
+      showNotification(err.message || 'Une erreur est survenue', 'error');
+      console.error('Error submitting form:', err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -188,12 +199,25 @@ export default function Employee() {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet employé?')) return;
     
     try {
-      // Mock delete API
-      await mockApiCall({ id });
-      setEmployees(prev => prev.filter(emp => emp.id !== id));
+      const response = await fetch(`${API_URL}/employes/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de la suppression');
+      }
+      
+      await fetchEmployees();
       showNotification('Employé supprimé avec succès');
     } catch (err) {
-      showNotification('Échec de la suppression', 'error');
+      showNotification(err.message || 'Échec de la suppression', 'error');
+      console.error('Error deleting employee:', err);
     }
   };
 
@@ -207,12 +231,11 @@ export default function Employee() {
       poste: employee.poste,
       salaire: employee.salaire,
       date_entree: employee.date_entree,
-      password: '' // Password field is blank when editing
+      password: ''
     });
     setEditingId(employee.id);
     setShowForm(true);
     setTimeout(() => setFormAnimation(true), 50);
-    // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -235,13 +258,19 @@ export default function Employee() {
     }, 300);
   };
 
-  // Toggle form visibility with animation
+  // Toggle form visibility with loading state
   const toggleForm = () => {
     if (showForm) {
       resetForm();
     } else {
-      setShowForm(true);
-      setTimeout(() => setFormAnimation(true), 50);
+      setIsAddButtonLoading(true);
+      setTimeout(() => {
+        setShowForm(true);
+        setTimeout(() => {
+          setFormAnimation(true);
+          setIsAddButtonLoading(false);
+        }, 50);
+      }, 500); // Simulate loading for 500ms
     }
   };
 
@@ -258,10 +287,10 @@ export default function Employee() {
   // Filter and sort employees
   const sortedAndFilteredEmployees = [...employees]
     .filter(employee => 
-      employee.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.poste.toLowerCase().includes(searchTerm.toLowerCase())
+      employee.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.poste?.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       if (sortDirection === 'asc') {
@@ -274,11 +303,10 @@ export default function Employee() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
-        <div className=" bg-white text-black px-6 py-4">
-          <h1 className="text-2xl font-bold ">Gestion des Employés</h1>
+        <div className="bg-white text-black px-6 py-4">
+          <h1 className="text-2xl font-bold">Gestion des Employés</h1>
         </div>
         
-        {/* Notification */}
         <Notification 
           show={notification.show} 
           message={notification.message} 
@@ -301,21 +329,27 @@ export default function Employee() {
             
             <button 
               onClick={toggleForm}
+              disabled={isAddButtonLoading}
               className={`flex items-center px-4 py-2 rounded-lg shadow transition-all duration-200 w-full md:w-auto justify-center ${
                 showForm 
-                  ? 'bg-red-500 hover:bg-red-600 text-white' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-              }`}
+                ? 'bg-red-500 hover:bg-red-600 text-white' 
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+              } ${isAddButtonLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
             >
-              {showForm ? (
+              {isAddButtonLoading ? (
                 <>
-                  <X className="mr-2" size={18} />
-                  <span>Annuler</span>
+                <Loader className="mr-2 animate-spin" size={18} />
+                <span>Chargement...</span>
+                </>
+              ) : showForm ? (
+                <>
+                <X className="mr-2" size={18} />
+                <span>Annuler</span>
                 </>
               ) : (
                 <>
-                  <UserPlus className="mr-2" size={18} />
-                  <span>Ajouter un employé</span>
+                <UserPlus className="mr-2" size={18} />
+                <span>Ajouter un employé</span>
                 </>
               )}
             </button>
@@ -337,6 +371,7 @@ export default function Employee() {
                     value={formData.nom}
                     onChange={handleChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -348,6 +383,7 @@ export default function Employee() {
                     value={formData.prenom}
                     onChange={handleChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -359,6 +395,7 @@ export default function Employee() {
                     value={formData.email}
                     onChange={handleChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -370,6 +407,7 @@ export default function Employee() {
                     value={formData.telephone}
                     onChange={handleChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -381,6 +419,7 @@ export default function Employee() {
                     value={formData.poste}
                     onChange={handleChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -392,6 +431,7 @@ export default function Employee() {
                     value={formData.salaire}
                     onChange={handleChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -403,6 +443,7 @@ export default function Employee() {
                     value={formData.date_entree}
                     onChange={handleChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -416,6 +457,7 @@ export default function Employee() {
                     value={formData.password}
                     onChange={handleChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -424,6 +466,7 @@ export default function Employee() {
                 <button
                   onClick={resetForm}
                   className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors duration-200 flex items-center"
+                  disabled={isSubmitting}
                 >
                   <X size={16} className="mr-2" />
                   Annuler
@@ -431,10 +474,22 @@ export default function Employee() {
                 
                 <button
                   onClick={handleSubmit}
-                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md shadow-md hover:shadow-lg transition-all duration-200 flex items-center"
+                  disabled={isSubmitting}
+                  className={`px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md shadow-md hover:shadow-lg transition-all duration-200 flex items-center ${
+                    isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
                 >
-                  <Check size={16} className="mr-2" />
-                  {editingId ? 'Mettre à jour' : 'Enregistrer'}
+                  {isSubmitting ? (
+                    <>
+                      <Loader size={16} className="mr-2 animate-spin" />
+                      <span>Traitement en cours...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={16} className="mr-2" />
+                      <span>{editingId ? 'Mettre à jour' : 'Enregistrer'}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -460,13 +515,12 @@ export default function Employee() {
             </div>
           </div>
           
-          {/* Employees Table Card */}
+          {/* Employees Table */}
           <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
             <div className="border-b bg-gray-50 px-4 py-3">
               <h2 className="font-medium text-gray-700">Liste des employés</h2>
             </div>
             
-            {/* Employees Table */}
             {isLoading ? (
               <div className="p-4">
                 <SkeletonLoader />
@@ -550,21 +604,6 @@ export default function Employee() {
                           )}
                         </div>
                       </th>
-                      <th 
-                        className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors hidden lg:table-cell"
-                        onClick={() => handleSort('date_entree')}
-                      >
-                        <div className="flex items-center">
-                          Date d'entrée
-                          {sortField === 'date_entree' && (
-                            <ChevronDown 
-                              className={`ml-1 w-4 h-4 transition-transform duration-200 ${
-                                sortDirection === 'desc' ? 'transform rotate-180' : ''
-                              }`} 
-                            />
-                          )}
-                        </div>
-                      </th>
                       <th className="py-3 px-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
@@ -573,7 +612,7 @@ export default function Employee() {
                   <tbody className="divide-y divide-gray-200">
                     {sortedAndFilteredEmployees.length === 0 ? (
                       <tr>
-                        <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                        <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
                           <div className="flex flex-col items-center justify-center">
                             <Search className="h-8 w-8 text-gray-400 mb-2" />
                             <p className="text-lg font-medium">Aucun employé trouvé</p>
@@ -582,14 +621,10 @@ export default function Employee() {
                         </td>
                       </tr>
                     ) : (
-                      sortedAndFilteredEmployees.map((employee, index) => (
+                      sortedAndFilteredEmployees.map((employee) => (
                         <tr 
                           key={employee.id} 
                           className="hover:bg-blue-50 transition-colors duration-150"
-                          style={{ 
-                            animationDelay: `${index * 50}ms`,
-                            animation: 'fadeIn 0.5s ease-in-out forwards'
-                          }}
                         >
                           <td className="py-3 px-4">{employee.nom}</td>
                           <td className="py-3 px-4">{employee.prenom}</td>
@@ -597,9 +632,8 @@ export default function Employee() {
                           <td className="py-3 px-4 hidden lg:table-cell">{employee.telephone}</td>
                           <td className="py-3 px-4 hidden md:table-cell">{employee.poste}</td>
                           <td className="py-3 px-4 hidden lg:table-cell">
-                            <span className="font-medium">{employee.salaire.toLocaleString()}€</span>
+                            <span className="font-medium">{Number(employee.salaire).toLocaleString()}€</span>
                           </td>
-                          <td className="py-3 px-4 hidden lg:table-cell">{new Date(employee.date_entree).toLocaleDateString()}</td>
                           <td className="py-3 px-4">
                             <div className="flex justify-center gap-2">
                               <button
@@ -626,26 +660,6 @@ export default function Employee() {
               </div>
             )}
           </div>
-          
-          {/* Pagination - Static for demonstration */}
-          {!isLoading && sortedAndFilteredEmployees.length > 0 && (
-            <div className="flex items-center justify-between mt-6 bg-white p-4 rounded-lg shadow-sm">
-              <div className="text-sm text-gray-500">
-                Affichage de {sortedAndFilteredEmployees.length} employés
-              </div>
-              <div className="flex space-x-1">
-                <button className="px-3 py-1 bg-white border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50">
-                  Précédent
-                </button>
-                <button className="px-3 py-1 bg-indigo-600 border border-indigo-600 rounded-md text-white">
-                  1
-                </button>
-                <button className="px-3 py-1 bg-white border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50">
-                  Suivant
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

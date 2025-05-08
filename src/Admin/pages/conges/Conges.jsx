@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, X, Calendar, Clock, User, MessageCircle } from 'lucide-react';
+import { Check, X, Calendar, User } from 'lucide-react'; // Removed Clock and MessageCircle as they are not used
 
 export default function Conges() {
   const [conges, setConges] = useState([]);
@@ -10,10 +10,9 @@ export default function Conges() {
   const [modalOpen, setModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [showExplicationTextarea, setShowExplicationTextarea] = useState(false);
 
-  // Simuler le chargement des données depuis l'API
   useEffect(() => {
-    // Simule un appel API avec des données factices
     setTimeout(() => {
       const mockConges = [
         {
@@ -24,7 +23,7 @@ export default function Conges() {
           date_fin: '2025-05-15',
           motif: 'Vacances',
           statut: 'en_attente',
-          created_at: '2025-05-01'
+          // created_at is not directly displayed in the table anymore but could be useful for sorting or other logic
         },
         {
           id: 2,
@@ -34,7 +33,6 @@ export default function Conges() {
           date_fin: '2025-05-16',
           motif: 'Rendez-vous médical',
           statut: 'en_attente',
-          created_at: '2025-05-02'
         },
         {
           id: 3,
@@ -44,7 +42,6 @@ export default function Conges() {
           date_fin: '2025-06-15',
           motif: 'Congés d\'été',
           statut: 'en_attente',
-          created_at: '2025-05-03'
         }
       ];
       setConges(mockConges);
@@ -56,23 +53,41 @@ export default function Conges() {
     setSelectedConge(conge);
     setExplication('');
     setModalOpen(true);
+    setShowExplicationTextarea(false);
+    setErrorMessage('');
   };
 
   const closeModal = () => {
     setModalOpen(false);
     setSelectedConge(null);
     setExplication('');
+    setShowExplicationTextarea(false);
+    setErrorMessage('');
+  };
+
+  const handleAttemptRejection = () => {
+    if (!showExplicationTextarea) {
+      setShowExplicationTextarea(true);
+      setErrorMessage('');
+      return;
+    }
+
+    if (!explication) {
+      setErrorMessage('Une explication est requise pour un refus.');
+      return;
+    }
+    
+    updateCongeStatus('rejete');
   };
 
   const updateCongeStatus = (status) => {
-    if (status === 'rejete' && !explication) {
-      setErrorMessage('Une explication est requise pour un refus.');
-      return;
+    if (status === 'rejete' && !explication && showExplicationTextarea) { 
+        setErrorMessage('Une explication est requise pour un refus.');
+        return;
     }
 
     setErrorMessage('');
     
-    // Simuler l'appel à l'API pour mettre à jour le statut
     const updatedConges = conges.map(conge => {
       if (conge.id === selectedConge.id) {
         return {
@@ -84,13 +99,11 @@ export default function Conges() {
       return conge;
     });
 
-    // Simuler le délai d'attente de l'API
     setTimeout(() => {
       setConges(updatedConges);
       setSuccessMessage(`La demande de congé a été ${status === 'approuve' ? 'approuvée' : 'rejetée'} avec succès.`);
       closeModal();
       
-      // Effacer le message de succès après 3 secondes
       setTimeout(() => {
         setSuccessMessage('');
       }, 3000);
@@ -109,6 +122,7 @@ export default function Conges() {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return '';
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('fr-FR', options);
   };
@@ -153,7 +167,8 @@ export default function Conges() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Période</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motif</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date de demande</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date de début</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date de fin</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -187,8 +202,14 @@ export default function Conges() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <Clock className="h-5 w-5 text-gray-400 mr-2" />
-                      <div className="text-sm text-gray-500">{formatDate(conge.created_at)}</div>
+                      <Calendar className="h-5 w-5 text-gray-400 mr-2" />
+                      <div className="text-sm text-gray-500">{formatDate(conge.date_debut)}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <Calendar className="h-5 w-5 text-gray-400 mr-2" />
+                      <div className="text-sm text-gray-500">{formatDate(conge.date_fin)}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -240,23 +261,29 @@ export default function Conges() {
                   <p className="font-medium">{selectedConge.motif}</p>
                 </div>
                 
-                <div>
-                  <label htmlFor="explication" className="block text-sm font-medium text-gray-700 mb-1">
-                    Explication (obligatoire en cas de refus)
-                  </label>
-                  <textarea
-                    id="explication"
-                    rows="3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Veuillez saisir une explication en cas de refus..."
-                    value={explication}
-                    onChange={(e) => setExplication(e.target.value)}
-                  ></textarea>
-                  
-                  {errorMessage && (
-                    <p className="text-red-500 text-xs mt-1">{errorMessage}</p>
-                  )}
-                </div>
+                {showExplicationTextarea && (
+                  <div>
+                    <label htmlFor="explication" className="block text-sm font-medium text-gray-700 mb-1">
+                      Explication (obligatoire pour le refus)
+                    </label>
+                    <textarea
+                      id="explication"
+                      rows="3"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Veuillez saisir une explication en cas de refus..."
+                      value={explication}
+                      onChange={(e) => {
+                        setExplication(e.target.value);
+                        if (e.target.value && errorMessage) {
+                           setErrorMessage('');
+                        }
+                      }}
+                    ></textarea>
+                    {errorMessage && (
+                      <p className="text-red-500 text-xs mt-1">{errorMessage}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
@@ -271,7 +298,7 @@ export default function Conges() {
               <button
                 type="button"
                 className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                onClick={() => updateCongeStatus('rejete')}
+                onClick={handleAttemptRejection}
               >
                 <X className="inline-block h-4 w-4 mr-1" />
                 Refuser
@@ -279,7 +306,14 @@ export default function Conges() {
               <button
                 type="button"
                 className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                onClick={() => updateCongeStatus('approuve')}
+                onClick={() => {
+                  if (showExplicationTextarea) {
+                    setShowExplicationTextarea(false);
+                    setExplication('');
+                  }
+                  setErrorMessage('');
+                  updateCongeStatus('approuve');
+                }}
               >
                 <Check className="inline-block h-4 w-4 mr-1" />
                 Approuver
@@ -290,4 +324,4 @@ export default function Conges() {
       )}
     </div>
   );
-}
+}   

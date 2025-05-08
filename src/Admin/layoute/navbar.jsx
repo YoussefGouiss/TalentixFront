@@ -1,9 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Menu, Search, Bell, ChevronDown, User, Settings, LogOut } from 'lucide-react';
 
 export default function Navbar({ currentPage, toggleSidebar }) {
   const [showDropdown, setShowDropdown] = useState(false);
-  
+  const [user, setUser] = useState({}); 
+  const handleLogout = () => {
+    localStorage.removeItem('admin_token'); // ⬅️ مسح التوكن
+    window.location.href = "/admin/login"; // ⬅️ رجّع لصفحة الدخول
+  };
+  useEffect(()=>{
+   const response = fetch('http://localhost:8000/api/admin/profile',{
+    method : 'GET',
+    headers : {
+      'Authorization' : `Bearer ${localStorage.getItem('admin_token')}`,
+      'Content-Type' : 'application/json',
+   }
+   })
+   .then(res => res.json())
+   .then(data => {
+    setUser(data);
+   })
+  })
   return (
     <div className="h-16 bg-gradient-to-r from-cyan-800 to-blue-900 flex items-center justify-between px-6 w-full text-white shadow-md">
       {/* Left Section */}
@@ -45,7 +62,7 @@ export default function Navbar({ currentPage, toggleSidebar }) {
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white text-xs font-bold border border-white/30">
               JD
             </div>
-            <span className="text-sm text-white/90 hidden md:inline-block">John Doe</span>
+            <span className="text-sm text-white/90 hidden md:inline-block">{user.name}</span>
             <ChevronDown size={14} className="text-white/70" />
           </button>
           
@@ -62,7 +79,7 @@ export default function Navbar({ currentPage, toggleSidebar }) {
                   <span>Paramètres</span>
                 </button>
                 <div className="border-t border-blue-700 my-1"></div>
-                <button className="w-full text-left px-4 py-2 text-sm text-red-300 hover:bg-blue-800 flex items-center gap-2">
+                <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-300 hover:bg-blue-800 flex items-center gap-2">
                   <LogOut size={14} />
                   <span>Déconnexion</span>
                 </button>

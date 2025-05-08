@@ -75,7 +75,7 @@ const SkeletonLoader = () => {
   );
 };
 
-export default function PresencesManagement() {
+export default function Absences() {
   const [absences, setAbsences] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
