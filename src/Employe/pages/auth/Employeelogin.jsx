@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { FiUser, FiLock, FiLogIn, FiInfo, FiFacebook, FiInstagram, FiTwitter } from 'react-icons/fi';
+// Import for navigation after login
+import { useNavigate } from 'react-router-dom';
+
+// API configuration - match with your Laravel backend
+const API_BASE_URL = 'http://localhost:8000/api/employe'; // Update with your actual API URL
 
 function EmployeeLogin() {
-  const [username, setUsername] = useState('');
+  const [email, setemail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isMounted, setIsMounted] = useState(false); // For animations
+  
+  // For navigation after successful login
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Mount animation trigger
@@ -14,26 +22,50 @@ function EmployeeLogin() {
     return () => clearTimeout(timer);
   }, []);
 
-
-  const handleLogin = (event) => {
+  const handleLogin = async (event) => {
     event.preventDefault();
     setError(''); // Clear previous error immediately
     setLoading(true);
-    console.log('Employee logging in with:', { username, password });
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ email, password }), // Send credentials
+      });
 
-    // --- Placeholder for actual login logic ---
-    setTimeout(() => {
-       if (username === "employee" && password === "password123") {
-           alert(`Employee login successful for: ${username}`);
-           // Clear fields on success (optional)
-           // setUsername('');
-           // setPassword('');
-       } else {
-           setError("Nom d'utilisateur ou mot de passe employé incorrect.");
-       }
+      const data = await response.json();
+
+      if (response.ok) { // Status code 200-299
+        // Login successful
+        console.log('Employe login successful:', data);
+        
+        // Store auth tokens/data in localStorage
+        localStorage.setItem('employe_token', data.token);  
+        
+        // Redirect to employee dashboard
+        navigate('/employe');
+      } else {
+        // Handle different error scenarios
+        if (data.error) {
+          setError(data.error); // For general errors
+        } else if (data.errors) {
+          // For Laravel validation errors
+          const firstErrorMessage = Object.values(data.errors)[0][0];
+          setError(firstErrorMessage);
+        } else {
+          setError("Nom d'utilisateur ou mot de passe employé incorrect.");
+        }
+      }
+    } catch (err) {
+      console.error('Login request failed:', err);
+      setError('Une erreur est survenue. Veuillez réessayer plus tard.');
+    } finally {
       setLoading(false);
-    }, 1500);
-    // --- End Placeholder ---
+    }
   };
 
   // Placeholder Logo using an Icon (Replace with your actual logo)
@@ -47,7 +79,7 @@ function EmployeeLogin() {
 
       {/* ========== START: Abstract Background Shapes ========== */}
       {/* Shape 1: Large, soft blue circle - Added subtle float */}
-      <div className={`absolute top-[-10%] left-[-15%] w-72 h-72 md:w-96 md:h-96 bg-[#3498DB]/10 rounded-full filter blur-3xl opacity-70 animate-pulse-slow transition-opacity duration-1000 ${isMounted ? 'opacity-70' : 'opacity-0'} animate-subtle-float`}></div> {/* Added animate-subtle-float */}
+      <div className={`absolute top-[-10%] left-[-15%] w-72 h-72 md:w-96 md:h-96 bg-[#3498DB]/10 rounded-full filter blur-3xl opacity-70 animate-pulse-slow transition-opacity duration-1000 ${isMounted ? 'opacity-70' : 'opacity-0'} animate-subtle-float`}></div>
 
       {/* Shape 2: Rotated rectangle gradient */}
       <div className={`absolute bottom-[5%] right-[-10%] w-60 h-80 md:w-80 md:h-96 bg-gradient-to-tr from-[#34495E]/30 via-[#2C3E50]/20 to-transparent rounded-3xl transform rotate-[30deg] filter blur-2xl opacity-60 transition-opacity duration-1000 delay-200 ${isMounted ? 'opacity-60' : 'opacity-0'}`}></div>
@@ -85,7 +117,7 @@ function EmployeeLogin() {
            </div>
            {/* Help Button - Fade in last */}
            <div className={`relative z-10 mt-auto transition-all duration-500 ease-out delay-300 ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
-               <button className="px-6 py-2.5 rounded-lg text-[#FFFFFF] text-sm font-semibold bg-gradient-to-r from-[#3498DB] to-[#2980B9] hover:from-[#2980B9] hover:to-[#3498DB] transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-[#3498DB]/30"> {/* Added active:scale-95 */}
+               <button className="px-6 py-2.5 rounded-lg text-[#FFFFFF] text-sm font-semibold bg-gradient-to-r from-[#3498DB] to-[#2980B9] hover:from-[#2980B9] hover:to-[#3498DB] transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-[#3498DB]/30">
                     Support Employé
                </button>
            </div>
@@ -101,7 +133,7 @@ function EmployeeLogin() {
 
           {/* Form - Fade in slightly later */}
           <form onSubmit={handleLogin} className={`space-y-6 transition-all duration-500 ease-out delay-[500ms] ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
-            {/* Username/Email Input */}
+            {/* email/Email Input */}
             <div>
               <label className="block text-[#ECF0F1]/80 text-xs font-semibold uppercase tracking-wider mb-1.5">
                 Identifiant Employé
@@ -111,8 +143,8 @@ function EmployeeLogin() {
                    <FiUser className="h-4 w-4 text-[#ECF0F1]/60" />
                  </span>
                 <input
-                  type="text" value={username} onChange={(e) => setUsername(e.target.value)} required
-                  className="bg-[#34495E]/40 border border-[#ECF0F1]/20 text-[#FFFFFF] rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3498DB]/70 focus:border-transparent placeholder-[#ECF0F1]/50 w-full text-sm transition duration-150 shadow-inner focus:scale-[1.02] origin-left" // Added focus:scale-[1.02] origin-left
+                  type="text" value={email} onChange={(e) => setemail(e.target.value)} required
+                  className="bg-[#34495E]/40 border border-[#ECF0F1]/20 text-[#FFFFFF] rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3498DB]/70 focus:border-transparent placeholder-[#ECF0F1]/50 w-full text-sm transition duration-150 shadow-inner focus:scale-[1.02] origin-left"
                   placeholder="ID Employé"
                 />
               </div>
@@ -128,30 +160,30 @@ function EmployeeLogin() {
                  </span>
                 <input
                   type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-                  className="bg-[#34495E]/40 border border-[#ECF0F1]/20 text-[#FFFFFF] rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3498DB]/70 focus:border-transparent placeholder-[#ECF0F1]/50 w-full text-sm transition duration-150 shadow-inner focus:scale-[1.02] origin-left" // Added focus:scale-[1.02] origin-left
+                  className="bg-[#34495E]/40 border border-[#ECF0F1]/20 text-[#FFFFFF] rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3498DB]/70 focus:border-transparent placeholder-[#ECF0F1]/50 w-full text-sm transition duration-150 shadow-inner focus:scale-[1.02] origin-left"
                   placeholder="••••••••"
                 />
               </div>
             </div>
              {/* Error Message Display - Added animation */}
              {error && (
-                 <div className="p-3 bg-[#E74C3C]/20 border border-[#E74C3C]/50 rounded-lg text-center animate-fade-in-down"> {/* Added animate-fade-in-down */}
+                 <div className="p-3 bg-[#E74C3C]/20 border border-[#E74C3C]/50 rounded-lg text-center animate-fade-in-down">
                      <p className="text-sm font-medium text-[#F5B7B1]">{error}</p>
                  </div>
              )}
             {/* Submit Button */}
             <button
               type="submit" disabled={loading}
-              className={`w-full px-6 py-3 mt-2 rounded-lg text-[#FFFFFF] text-sm font-semibold bg-gradient-to-r from-[#3498DB] to-[#2980B9] hover:from-[#2980B9] hover:to-[#3498DB] transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-[#3498DB]/40 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center`} // Added active:scale-95
+              className={`w-full px-6 py-3 mt-2 rounded-lg text-[#FFFFFF] text-sm font-semibold bg-gradient-to-r from-[#3498DB] to-[#2980B9] hover:from-[#2980B9] hover:to-[#3498DB] transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-[#3498DB]/40 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center`}
             >
               {loading ? (<svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>) : ('Connexion Employé')}
             </button>
           </form>
           {/* Social Icons - Fade in */}
           <div className={`flex justify-center space-x-6 mt-8 pt-6 border-t border-[#ECF0F1]/10 transition-all duration-500 ease-out delay-[600ms] ${isMounted ? 'opacity-100' : 'opacity-0'}`}>
-             <a href="#" aria-label="Facebook" className="text-[#ECF0F1]/60 hover:text-[#FFFFFF] text-xl transition-all duration-200 hover:scale-110 active:scale-90"><FiFacebook /></a> {/* Added hover/active scale */}
-             <a href="#" aria-label="Instagram" className="text-[#ECF0F1]/60 hover:text-[#FFFFFF] text-xl transition-all duration-200 hover:scale-110 active:scale-90"><FiInstagram /></a>{/* Added hover/active scale */}
-             <a href="#" aria-label="Twitter" className="text-[#ECF0F1]/60 hover:text-[#FFFFFF] text-xl transition-all duration-200 hover:scale-110 active:scale-90"><FiTwitter /></a>  {/* Added hover/active scale */}
+             <a href="#" aria-label="Facebook" className="text-[#ECF0F1]/60 hover:text-[#FFFFFF] text-xl transition-all duration-200 hover:scale-110 active:scale-90"><FiFacebook /></a>
+             <a href="#" aria-label="Instagram" className="text-[#ECF0F1]/60 hover:text-[#FFFFFF] text-xl transition-all duration-200 hover:scale-110 active:scale-90"><FiInstagram /></a>
+             <a href="#" aria-label="Twitter" className="text-[#ECF0F1]/60 hover:text-[#FFFFFF] text-xl transition-all duration-200 hover:scale-110 active:scale-90"><FiTwitter /></a>
           </div>
         </div>
       </div>

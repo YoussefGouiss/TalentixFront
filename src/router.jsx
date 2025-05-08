@@ -2,7 +2,6 @@ import React from 'react'
 import { createBrowserRouter } from 'react-router-dom'
 import WelcomPage from './Admin/pages/welcom';
 import AdminLogin from './Admin/pages/auth/Adminlogin';
-import EmployeeLogin from './Admin/pages/auth/Employeelogin';
 import MainLayoute from './Admin/layoute/main';
 import DashbordAdmin from './Admin/pages/Dashbord/DashbordAdmin';
 import Employee from './Admin/pages/employe/Employe';
@@ -10,6 +9,10 @@ import EProductOrdersPage from './Admin/pages/test';
 import Conges from './Admin/pages/conges/Conges';
 import Absences from './Admin/pages/employe/presences/Absences';
 import PrivateRoute from './Admin/PrivateRoute';
+import EmployeeLogin from './Employe/pages/auth/Employeelogin';
+import ProRoute from './Employe/ProRoute';
+import MainLayouteEmploye from './Employe/pages/Layout/main';
+import DashboardEmploye from './Employe/pages/dashboard/DashboardEmploye';
  const route = createBrowserRouter([
         {
             path :'/',
@@ -20,7 +23,7 @@ import PrivateRoute from './Admin/PrivateRoute';
             element : <AdminLogin/>
         },
         {
-            path :'/employeelogin',
+            path :'/employe/login',
             element : <EmployeeLogin/>
         },
         {
@@ -46,6 +49,16 @@ import PrivateRoute from './Admin/PrivateRoute';
                 {
                     path : 'Absences',
                     element : <Absences/>
+                },
+            ]
+        },
+        {
+            path : 'employe',
+            element :(<ProRoute><MainLayouteEmploye/></ProRoute> ),
+            children :[
+                {
+                    index : true,
+                    element  : <DashboardEmploye/>
                 },
             ]
         }
