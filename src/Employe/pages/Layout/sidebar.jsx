@@ -11,7 +11,7 @@ export default function SidebarEmploye() {
   const menuItems = [
     {id: "Dashboard", icon: <Home size={20} />, text: "Dashboard", route: "/employe" },
     {id: "Congés", icon: <Calendar size={20} />, text: "Congés", route: "/employe/conges" },
-    {id: "Rembourcement", icon: <BookOpen size={20} />, text: "Formation", route: "/employe/rembourcement" },
+    {id: "formation", icon: <BookOpen size={20} />, text: "formation", route: "/employe/formations" },
     {id: "paie", icon: <FileText size={20} />, text: "Fiches de paie", route: "/employe/paie" },
     {id: "Attestations", icon: <FileCheck size={20} />, text: "Attestations", route: "/employe/attestations" },
     {id: "Mutations", icon: <File size={20} />, text: "Mutations", route: "/employe/mutations" },

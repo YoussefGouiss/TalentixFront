@@ -15,6 +15,9 @@ import MainLayouteEmploye from './Employe/pages/Layout/main';
 import DashboardEmploye from './Employe/pages/dashboard/DashboardEmploye';
 import MaterialEmploye from './Employe/pages/material/Material';
 import MaterialAdmin from './Admin/pages/materialadmi/MaterialAdmin';
+import FormationAdmin from './Admin/pages/formation/FormationAdmin';
+import DemandeFormation from './Admin/pages/formation/DemandeFormation';
+import EmployeFormations from './Employe/formations/EmployeFormation';
  const route = createBrowserRouter([
         {
             path :'/',
@@ -56,6 +59,14 @@ import MaterialAdmin from './Admin/pages/materialadmi/MaterialAdmin';
                     path : 'material',
                     element : <MaterialAdmin/>
                 },
+                {
+                    path : 'formation',
+                    element : <FormationAdmin/>
+                },
+                {
+                    path : 'demandes-formations',
+                    element : <DemandeFormation/>
+                },
             ]
         },
         {
@@ -69,6 +80,10 @@ import MaterialAdmin from './Admin/pages/materialadmi/MaterialAdmin';
                 {
                     path : 'material',
                     element  : <MaterialEmploye/>
+                },
+                {
+                    path : 'formations',
+                    element  : <EmployeFormations/>
                 },
             ]
         }
