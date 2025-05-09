@@ -13,6 +13,7 @@ export default function Sidebar() {
     {id: "Employés", icon: <Users size={20} />, text: "Employés", route: "/admin/employes" },
     {id: "Absences", icon: <Clock size={20} />, text: "Absences", route: "/admin/absences" },
     {id: "Congés", icon: <Calendar size={20} />, text: "Congés", route: "/admin/conges" },
+    {id: "Material", icon: <Calendar size={20} />, text: "Material", route: "/admin/material" },
     {id: "Formation", icon: <BookOpen size={20} />, text: "Formation", route: "/admin/formation" },
     {id: "paie", icon: <FileText size={20} />, text: "Fiches de paie", route: "/admin/paie" },
     {id: "Recrutement", icon: <Briefcase size={20} />, text: "Recrutement", route: "/admin/recrutement" },

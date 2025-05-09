@@ -13,6 +13,8 @@ import EmployeeLogin from './Employe/pages/auth/Employeelogin';
 import ProRoute from './Employe/ProRoute';
 import MainLayouteEmploye from './Employe/pages/Layout/main';
 import DashboardEmploye from './Employe/pages/dashboard/DashboardEmploye';
+import MaterialEmploye from './Employe/pages/material/Material';
+import MaterialAdmin from './Admin/pages/materialadmi/MaterialAdmin';
  const route = createBrowserRouter([
         {
             path :'/',
@@ -50,6 +52,10 @@ import DashboardEmploye from './Employe/pages/dashboard/DashboardEmploye';
                     path : 'Absences',
                     element : <Absences/>
                 },
+                {
+                    path : 'material',
+                    element : <MaterialAdmin/>
+                },
             ]
         },
         {
@@ -59,6 +65,10 @@ import DashboardEmploye from './Employe/pages/dashboard/DashboardEmploye';
                 {
                     index : true,
                     element  : <DashboardEmploye/>
+                },
+                {
+                    path : 'material',
+                    element  : <MaterialEmploye/>
                 },
             ]
         }

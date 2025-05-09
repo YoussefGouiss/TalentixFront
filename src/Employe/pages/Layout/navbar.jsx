@@ -8,19 +8,6 @@ export default function NavbarEmploye({ currentPage, toggleSidebar }) {
     localStorage.removeItem('employe_token'); // ⬅️ مسح التوكن
     window.location.href = "/employe/login"; // ⬅️ رجّع لصفحة الدخول
   };
-  useEffect(()=>{
-   const response = fetch('http://localhost:8000/api/employe/profile',{
-    method : 'GET',
-    headers : {
-      'Authorization' : `Bearer ${localStorage.getItem('employe_token')}`,
-      'Content-Type' : 'application/json',
-   }
-   })
-   .then(res => res.json())
-   .then(data => {
-    setUser(data);
-   })
-  })
   return (
     <div className="h-16 bg-gradient-to-r from-cyan-800 to-blue-900 flex items-center justify-between px-6 w-full text-white shadow-md">
       {/* Left Section */}

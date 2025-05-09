@@ -16,7 +16,7 @@ export default function SidebarEmploye() {
     {id: "Attestations", icon: <FileCheck size={20} />, text: "Attestations", route: "/employe/attestations" },
     {id: "Mutations", icon: <File size={20} />, text: "Mutations", route: "/employe/mutations" },
     {id: "Calendrier", icon: <Calendar size={20} />, text: "Calendrier", route: "/employe/calendrier" },
-    {id: "Materiel", icon: <BookOpen size={20} />, text: "Materiel", route: "/employe/Materiel" },
+    {id: "Materiel", icon: <BookOpen size={20} />, text: "Materiel", route: "/employe/material" },
 
   ];
 
