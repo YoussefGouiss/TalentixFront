@@ -16,7 +16,7 @@ export default function Sidebar() {
     {id: "Material", icon: <Calendar size={20} />, text: "Material", route: "/admin/material" },
     {id: "Formation", icon: <BookOpen size={20} />, text: "Formation", route: "/admin/formation" },
     {id: "paie", icon: <FileText size={20} />, text: "Fiches de paie", route: "/admin/paie" },
-    {id: "Recrutement", icon: <Briefcase size={20} />, text: "Recrutement", route: "/admin/recrutement" },
+    {id: "Recrutements", icon: <Briefcase size={20} />, text: "Recrutements", route: "/admin/recrutements" || "admin/candidateur" },
     {id: "Attestations", icon: <FileCheck size={20} />, text: "Attestations", route: "/admin/attestations" },
     {id: "Mutations", icon: <File size={20} />, text: "Mutations", route: "/admin/mutations" },
     {id: "Contrats", icon: <Briefcase size={20} />, text: "Contrats", route: "/admin/contrats" },
