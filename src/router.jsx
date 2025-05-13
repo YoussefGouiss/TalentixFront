@@ -20,6 +20,9 @@ import DemandeFormation from './Admin/pages/formation/DemandeFormation';
 import EmployeFormations from './Employe/formations/EmployeFormation';
 import Recrutement from './Admin/pages/Recrutement/Recrutement';
 import DemandeCondidateur from './Admin/pages/Recrutement/DemandeCondidateur';
+import AttestationTypeManagement from './Admin/pages/Attestation/AttestationTypeManagement';
+import AttestationDemandeList from './Admin/pages/Attestation/DemandesDesAttestations';
+import EmployeDemandeAttestation from './Employe/pages/attestation/EmployeDemandeAttestation';
  const route = createBrowserRouter([
         {
             path :'/',
@@ -77,7 +80,15 @@ import DemandeCondidateur from './Admin/pages/Recrutement/DemandeCondidateur';
                     path : 'candidateur',
                     element : <DemandeCondidateur/>
                 },
-
+                 {
+                    path : 'attestations',
+                    element : <AttestationTypeManagement/>
+                },
+                 {
+                    path : 'demandeAttestation',
+                    element : <AttestationDemandeList/>
+                },
+                
             ]
         },
         {
@@ -95,6 +106,10 @@ import DemandeCondidateur from './Admin/pages/Recrutement/DemandeCondidateur';
                 {
                     path : 'formations',
                     element  : <EmployeFormations/>
+                },
+                {
+                    path : 'attestations',
+                    element  : <EmployeDemandeAttestation/>
                 },
             ]
         }
