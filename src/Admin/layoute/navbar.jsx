@@ -3,24 +3,42 @@ import { Menu, Search, Bell, ChevronDown, User, Settings, LogOut } from 'lucide-
 
 export default function Navbar({ currentPage, toggleSidebar }) {
   const [showDropdown, setShowDropdown] = useState(false);
-  const [user, setUser] = useState({}); 
+  const [user, setUser] = useState({});
+  
   const handleLogout = () => {
-    localStorage.removeItem('admin_token'); // ⬅️ مسح التوكن
-    window.location.href = "/admin/login"; // ⬅️ رجّع لصفحة الدخول
+    localStorage.removeItem('admin_token');
+    window.location.href = "/admin/login";
   };
-  useEffect(()=>{
-   const response = fetch('http://localhost:8000/api/admin/profile',{
-    method : 'GET',
-    headers : {
-      'Authorization' : `Bearer ${localStorage.getItem('admin_token')}`,
-      'Content-Type' : 'application/json',
-   }
-   })
-   .then(res => res.json())
-   .then(data => {
-    setUser(data);
-   })
-  })
+
+  useEffect(() => {
+    // Add dependency array to prevent infinite loop
+    const fetchUserProfile = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/admin/profile', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data);
+        } else if (response.status === 429) {
+          console.log('Rate limit exceeded. Waiting before retrying...');
+          // You could implement retry logic here if needed
+        } else {
+          console.log('Error fetching profile:', response.status);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, []); // Empty dependency array - fetch only once when component mounts
+  
   return (
     <div className="h-16 bg-gradient-to-r from-cyan-800 to-blue-900 flex items-center justify-between px-6 w-full text-white shadow-md">
       {/* Left Section */}
@@ -60,9 +78,9 @@ export default function Navbar({ currentPage, toggleSidebar }) {
             onClick={() => setShowDropdown(!showDropdown)}
           >
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white text-xs font-bold border border-white/30">
-              JD
+              {user.name ? user.name.charAt(0) : 'U'}
             </div>
-            <span className="text-sm text-white/90 hidden md:inline-block">{user.name}</span>
+            <span className="text-sm text-white/90 hidden md:inline-block">{user.name || ''}</span>
             <ChevronDown size={14} className="text-white/70" />
           </button>
           

@@ -20,6 +20,11 @@ import DemandeFormation from './Admin/pages/formation/DemandeFormation';
 import EmployeFormations from './Employe/formations/EmployeFormation';
 import FichesPaieAdmin from './Admin/pages/FichePaie/FichePaieAdmin';
 import AbsencesAdmin from './Admin/pages/Abscence/AbsenceAdmin';
+import Recrutement from './Admin/pages/Recrutement/Recrutement';
+import DemandeCondidateur from './Admin/pages/Recrutement/DemandeCondidateur';
+import AttestationTypeManagement from './Admin/pages/Attestation/AttestationTypeManagement';
+import AttestationDemandeList from './Admin/pages/Attestation/DemandesDesAttestations';
+import EmployeDemandeAttestation from './Employe/pages/attestation/EmployeDemandeAttestation';
  const route = createBrowserRouter([
         {
             path :'/',
@@ -70,10 +75,28 @@ import AbsencesAdmin from './Admin/pages/Abscence/AbsenceAdmin';
                     element : <DemandeFormation/>
                 },
                  {
+
                     path : 'FichePaie',
                     element : <FichesPaieAdmin/>
                 },
-            ]
+                {
+                    path : 'recrutements',
+                    element : <Recrutement/>
+                },
+                 {
+                    path : 'candidateur',
+                    element : <DemandeCondidateur/>
+                },
+                 {
+                    path : 'attestations',
+                    element : <AttestationTypeManagement/>
+                },
+                 {
+                    path : 'demandeAttestation',
+                    element : <AttestationDemandeList/>
+                },
+                
+            ],
         },
         {
             path : 'employe',
@@ -90,6 +113,10 @@ import AbsencesAdmin from './Admin/pages/Abscence/AbsenceAdmin';
                 {
                     path : 'formations',
                     element  : <EmployeFormations/>
+                },
+                {
+                    path : 'attestations',
+                    element  : <EmployeDemandeAttestation/>
                 },
             ]
         }
