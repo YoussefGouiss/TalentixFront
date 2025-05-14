@@ -18,6 +18,8 @@ import MaterialAdmin from './Admin/pages/materialadmi/MaterialAdmin';
 import FormationAdmin from './Admin/pages/formation/FormationAdmin';
 import DemandeFormation from './Admin/pages/formation/DemandeFormation';
 import EmployeFormations from './Employe/formations/EmployeFormation';
+import FichesPaieAdmin from './Admin/pages/FichePaie/FichePaieAdmin';
+import AbsencesAdmin from './Admin/pages/Abscence/AbsenceAdmin';
  const route = createBrowserRouter([
         {
             path :'/',
@@ -53,7 +55,7 @@ import EmployeFormations from './Employe/formations/EmployeFormation';
                 },
                 {
                     path : 'Absences',
-                    element : <Absences/>
+                    element : <AbsencesAdmin/>
                 },
                 {
                     path : 'material',
@@ -66,6 +68,10 @@ import EmployeFormations from './Employe/formations/EmployeFormation';
                 {
                     path : 'demandes-formations',
                     element : <DemandeFormation/>
+                },
+                 {
+                    path : 'FichePaie',
+                    element : <FichesPaieAdmin/>
                 },
             ]
         },
