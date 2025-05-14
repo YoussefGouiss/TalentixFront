@@ -18,6 +18,8 @@ import MaterialAdmin from './Admin/pages/materialadmi/MaterialAdmin';
 import FormationAdmin from './Admin/pages/formation/FormationAdmin';
 import DemandeFormation from './Admin/pages/formation/DemandeFormation';
 import EmployeFormations from './Employe/formations/EmployeFormation';
+import FichesPaieAdmin from './Admin/pages/FichePaie/FichePaieAdmin';
+import AbsencesAdmin from './Admin/pages/Abscence/AbsenceAdmin';
 import Recrutement from './Admin/pages/Recrutement/Recrutement';
 import DemandeCondidateur from './Admin/pages/Recrutement/DemandeCondidateur';
 import AttestationTypeManagement from './Admin/pages/Attestation/AttestationTypeManagement';
@@ -59,7 +61,7 @@ import Conge from './Employe/pages/conges/Conge';
                 },
                 {
                     path : 'Absences',
-                    element : <Absences/>
+                    element : <AbsencesAdmin/>
                 },
                 {
                     path : 'material',
@@ -74,6 +76,11 @@ import Conge from './Employe/pages/conges/Conge';
                     element : <DemandeFormation/>
                 },
                  {
+
+                    path : 'FichePaie',
+                    element : <FichesPaieAdmin/>
+                },
+                {
                     path : 'recrutements',
                     element : <Recrutement/>
                 },
@@ -90,7 +97,7 @@ import Conge from './Employe/pages/conges/Conge';
                     element : <AttestationDemandeList/>
                 },
                 
-            ]
+            ],
         },
         {
             path : 'employe',
