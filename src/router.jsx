@@ -23,6 +23,7 @@ import DemandeCondidateur from './Admin/pages/Recrutement/DemandeCondidateur';
 import AttestationTypeManagement from './Admin/pages/Attestation/AttestationTypeManagement';
 import AttestationDemandeList from './Admin/pages/Attestation/DemandesDesAttestations';
 import EmployeDemandeAttestation from './Employe/pages/attestation/EmployeDemandeAttestation';
+import Conge from './Employe/pages/conges/Conge';
  const route = createBrowserRouter([
         {
             path :'/',
@@ -110,6 +111,10 @@ import EmployeDemandeAttestation from './Employe/pages/attestation/EmployeDemand
                 {
                     path : 'attestations',
                     element  : <EmployeDemandeAttestation/>
+                },
+                 {
+                    path : 'conges',
+                    element  : <Conge/>
                 },
             ]
         }
