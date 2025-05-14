@@ -26,6 +26,8 @@ import AttestationTypeManagement from './Admin/pages/Attestation/AttestationType
 import AttestationDemandeList from './Admin/pages/Attestation/DemandesDesAttestations';
 import EmployeDemandeAttestation from './Employe/pages/attestation/EmployeDemandeAttestation';
 import Conge from './Employe/pages/conges/Conge';
+import AbsenceAdmin from './Admin/pages/Abscence/AbsenceAdmin';
+import AbsenceEmploye from './Employe/pages/absences/AbsenceEmploye';
  const route = createBrowserRouter([
         {
             path :'/',
@@ -61,7 +63,7 @@ import Conge from './Employe/pages/conges/Conge';
                 },
                 {
                     path : 'Absences',
-                    element : <AbsencesAdmin/>
+                    element : <AbsenceAdmin/>
                 },
                 {
                     path : 'material',
@@ -122,6 +124,10 @@ import Conge from './Employe/pages/conges/Conge';
                  {
                     path : 'conges',
                     element  : <Conge/>
+                },
+                {
+                    path : 'absences',
+                    element  : <AbsenceEmploye/>
                 },
             ]
         }

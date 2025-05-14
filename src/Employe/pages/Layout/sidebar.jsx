@@ -12,7 +12,7 @@ export default function SidebarEmploye() {
     {id: "Dashboard", icon: <Home size={20} />, text: "Dashboard", route: "/employe" },
     {id: "Congés", icon: <Calendar size={20} />, text: "Congés", route: "/employe/conges" },
     {id: "formation", icon: <BookOpen size={20} />, text: "formation", route: "/employe/formations" },
-    {id: "paie", icon: <FileText size={20} />, text: "Fiches de paie", route: "/employe/paie" },
+    {id: "absences", icon: <FileText size={20} />, text: "absences", route: "/employe/absences" },
     {id: "Attestations", icon: <FileCheck size={20} />, text: "Attestations", route: "/employe/attestations" },
     {id: "Calendrier", icon: <Calendar size={20} />, text: "Calendrier", route: "/employe/calendrier" },
     {id: "Materiel", icon: <BookOpen size={20} />, text: "Materiel", route: "/employe/material" },
