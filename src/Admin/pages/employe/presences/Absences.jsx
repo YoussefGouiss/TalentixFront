@@ -1,687 +1,491 @@
-import { useState, useEffect } from 'react';
-import { Plus, Check, X, Filter, Calendar, RefreshCcw, Search, ChevronDown, UserPlus, HelpCircle } from 'lucide-react';
+// src/Absences.jsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Check, X, Filter, Calendar, RefreshCcw, Search, ChevronDown, UserPlus, HelpCircle, Loader } from 'lucide-react'; // Using Lucide icons
 
-// Mock data for testing (similar structure to EmployeeManagement's mock for consistency)
+// Mock data (assuming it's still needed for this example)
 const mockEmployeesData = [
   { id: 1, nom: 'Jean Dupont', email: 'jean@example.com' },
   { id: 2, nom: 'Sophie Martin', email: 'sophie@example.com' },
   { id: 3, nom: 'Thomas Bernard', email: 'thomas@example.com' },
   { id: 4, nom: 'Marie Leroy', email: 'marie@example.com' }
 ];
-
 const mockAbsencesData = [
   { id: 1, employe_id: 1, date_debut: '2025-05-01', date_fin: '2025-05-03', motif: 'Maladie', justifiee: true, impact_salaire: false },
   { id: 2, employe_id: 2, date_debut: '2025-05-02', date_fin: '2025-05-04', motif: 'Congé personnel', justifiee: false, impact_salaire: true },
   { id: 3, employe_id: 3, date_debut: '2025-05-05', date_fin: '2025-05-06', motif: 'Rendez-vous médical', justifiee: null, impact_salaire: null },
-  { id: 4, employe_id: 1, date_debut: '2025-06-10', date_fin: '2025-06-10', motif: 'Formation', justifiee: true, impact_salaire: false },
-  { id: 5, employe_id: 4, date_debut: '2025-06-15', date_fin: '2025-06-17', motif: 'Vacances', justifiee: true, impact_salaire: false },
 ];
 
 // Animated form transition component
 const SlideDown = ({ isVisible, children }) => {
   return (
-    <div 
+    <div
       className={`transition-all duration-300 ease-in-out overflow-hidden ${
-        isVisible ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+        isVisible ? 'max-h-[1000px] opacity-100 py-2' : 'max-h-0 opacity-0 py-0'
       }`}
     >
-      {children}
+      {isVisible && children}
     </div>
   );
 };
 
-// Animated notification component
+// Animated notification component - Themed
 const Notification = ({ show, message, type }) => {
   return (
-    <div 
-      className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-500 ease-in-out ${
-        show 
-          ? 'translate-y-0 opacity-100' 
-          : '-translate-y-12 opacity-0 pointer-events-none'
+    <div
+      className={`fixed top-5 right-5 z-[100] p-4 rounded-lg shadow-xl transform transition-all duration-500 ease-in-out ${
+        show
+        ? 'translate-y-0 opacity-100'
+        : '-translate-y-16 opacity-0 pointer-events-none'
       } ${
-        type === 'success' 
-          ? 'bg-green-100 text-green-800 border-l-4 border-green-500' 
-          : 'bg-red-100 text-red-800 border-l-4 border-red-500'
+        type === 'success' // Teal for success (can be adjusted)
+        ? 'bg-[#567C8D] text-white border-l-4 border-[#2F4156]' // Teal bg, Navy border
+        : 'bg-red-500 text-white border-l-4 border-red-700'    // Keeping red for error
       }`}
     >
       <div className="flex items-center">
         {type === 'success' ? (
-          <Check className="h-5 w-5 mr-2" />
+          <Check className="h-5 w-5 mr-3 flex-shrink-0" />
         ) : (
-          <X className="h-5 w-5 mr-2" />
+          <X className="h-5 w-5 mr-3 flex-shrink-0" />
         )}
-        {message}
+        <span className="text-sm font-medium">{message}</span>
       </div>
     </div>
   );
 };
 
-// Skeleton loader component for Absences table
+
+// Skeleton loader component - Themed
 const SkeletonLoader = () => {
   return (
-    <div className="animate-pulse">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="flex space-x-4 py-3 border-b">
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div> {/* Employé */}
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div> {/* Dates */}
-          <div className="h-4 bg-gray-200 rounded w-1/6"></div> {/* Durée */}
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div> {/* Motif */}
-          <div className="h-4 bg-gray-200 rounded w-1/6"></div> {/* Statut */}
-          <div className="h-4 bg-gray-200 rounded w-1/6"></div> {/* Impact */}
-          <div className="h-8 bg-gray-200 rounded w-16"></div>  {/* Actions */}
+    <div className="animate-pulse p-4">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="flex space-x-4 py-3.5 border-b border-[#C8D9E6]/40">
+          <div className="h-5 bg-[#C8D9E6]/60 rounded w-1/4"></div>
+          <div className="h-5 bg-[#C8D9E6]/60 rounded w-1/4"></div>
+          <div className="h-5 bg-[#C8D9E6]/60 rounded w-1/6 hidden sm:block"></div>
+          <div className="h-5 bg-[#C8D9E6]/60 rounded w-1/4"></div>
+          <div className="h-5 bg-[#C8D9E6]/60 rounded w-1/6"></div>
+          <div className="h-5 bg-[#C8D9E6]/60 rounded w-1/6 hidden md:block"></div>
+          <div className="h-8 bg-[#C8D9E6]/80 rounded w-20"></div>
         </div>
       ))}
     </div>
   );
 };
 
+
 export default function Absences() {
   const [absences, setAbsences] = useState([]);
-  const [employees, setEmployees] = useState([]);
+  const [employees, setEmployees] = useState(mockEmployeesData); // Initialize with mock for dropdown
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [nextId, setNextId] = useState(mockAbsencesData.length + 1); // For generating new IDs
-  const [sortField, setSortField] = useState('date_debut'); // Default sort field
-  const [sortDirection, setSortDirection] = useState('desc'); // Default sort direction
+  const [nextId, setNextId] = useState(mockAbsencesData.length + 1);
+  const [sortField, setSortField] = useState('date_debut');
+  const [sortDirection, setSortDirection] = useState('desc');
   const [formAnimation, setFormAnimation] = useState(false);
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'justified', 'unjustified', 'pending'
-  
+  const [filterStatus, setFilterStatus] = useState('all');
+
   const [formData, setFormData] = useState({
-    employe_id: '',
-    date_debut: '',
-    date_fin: '',
-    motif: ''
+    employe_id: '', date_debut: '', date_fin: '', motif: ''
   });
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
 
-  const [notification, setNotification] = useState({
-    show: false,
-    message: '',
-    type: 'success'
-  });
+  const mockApiCall = async (data, delay = 500) => new Promise(resolve => setTimeout(() => resolve({ success: true, data }), delay));
 
-  // Mock API call helper
-  const mockApiCall = async (data, delay = 800) => {
-    return new Promise((resolve, reject) => { // Added reject for error simulation
-      setTimeout(() => {
-        // Simulate occasional error
-        // if (Math.random() < 0.1) { 
-        //   reject(new Error("Simulated API Error"));
-        //   return;
-        // }
-        resolve({ success: true, data });
-      }, delay);
-    });
-  };
-  
-  // Fetch initial data
   const fetchData = async () => {
-    setIsLoading(true);
-    setError(null);
+    setIsLoading(true); setError(null);
     try {
-      // Simulate API delay for combined fetching
-      await mockApiCall(null, 1200); 
-      
-      // Populate employees with their names for easy lookup
+      await mockApiCall(null, 1000);
       const absencesWithEmployeeDetails = mockAbsencesData.map(absence => {
         const employee = mockEmployeesData.find(emp => emp.id === absence.employe_id);
-        return { ...absence, employee: employee || { nom: 'Inconnu', email: '' } };
+        return { ...absence, employeeName: employee ? employee.nom : 'Inconnu', employeeEmail: employee ? employee.email : '' };
       });
-
       setAbsences(absencesWithEmployeeDetails);
-      setEmployees(mockEmployeesData);
-      setIsLoading(false);
     } catch (err) {
-      setError("Erreur lors du chargement des données. " + err.message);
+      setError("Erreur: Impossible de charger les absences.");
+    } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  // Handle form input changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Show notification
-  const showNotification = (message, type = 'success') => {
+  const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const showAppNotification = (message, type = 'success') => {
     setNotification({ show: true, message, type });
-    setTimeout(() => {
-      setNotification({ show: false, message: '', type: 'success' });
-    }, 3000);
+    setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
   };
 
-  // Handle form submission for adding a new absence
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    
     if (!formData.employe_id || !formData.date_debut || !formData.motif) {
-      showNotification('Veuillez remplir les champs Employé, Date de début et Motif.', 'error');
-      return;
+      showAppNotification('Veuillez remplir tous les champs requis.', 'error'); return;
     }
-
     try {
-      const newAbsenceData = { 
-        ...formData, 
-        id: nextId, 
-        justifiee: null, // New absences are pending by default
-        impact_salaire: null,
-        employe_id: parseInt(formData.employe_id)
-      };
+      const newAbsenceData = { ...formData, id: nextId, justifiee: null, impact_salaire: null, employe_id: parseInt(formData.employe_id) };
       await mockApiCall(newAbsenceData);
-      
-      const employeeDetails = employees.find(emp => emp.id === newAbsenceData.employe_id);
-      setAbsences(prev => [...prev, { ...newAbsenceData, employee: employeeDetails }]);
-      setNextId(nextId + 1);
-      showNotification('Absence ajoutée avec succès');
-      resetForm();
-    } catch (err) {
-      showNotification('Une erreur est survenue lors de l\'ajout: ' + err.message, 'error');
-    }
+      const employee = employees.find(emp => emp.id === newAbsenceData.employe_id);
+      setAbsences(prev => [...prev, { ...newAbsenceData, employeeName: employee?.nom, employeeEmail: employee?.email }]);
+      setNextId(prev => prev + 1);
+      showAppNotification('Absence ajoutée avec succès');
+      resetFormAndHide();
+    } catch (err) { showAppNotification(`Erreur: ${err.message}`, 'error'); }
   };
-  
-  // Handle justification/validation status change
+
   const handleJustificationChange = async (absenceId, isJustified) => {
     try {
-      await mockApiCall({ absenceId, isJustified }); // Mock API call for update
-      setAbsences(prevAbsences => 
-        prevAbsences.map(absence => 
-          absence.id === absenceId 
-            ? { ...absence, justifiee: isJustified, impact_salaire: !isJustified } 
-            : absence
-        )
-      );
-      showNotification(`Statut de l'absence mis à jour.`);
-    } catch (err) {
-      showNotification("Erreur lors de la mise à jour du statut: " + err.message, 'error');
-    }
+      await mockApiCall({ absenceId, isJustified });
+      setAbsences(prev => prev.map(abs => abs.id === absenceId ? { ...abs, justifiee: isJustified, impact_salaire: !isJustified } : abs));
+      showAppNotification('Statut mis à jour.');
+    } catch (err) { showAppNotification(`Erreur: ${err.message}`, 'error'); }
   };
 
-  // Reset form
-  const resetForm = () => {
+  const resetFormAndHide = () => {
     setFormAnimation(false);
     setTimeout(() => {
-      setFormData({
-        employe_id: '',
-        date_debut: '',
-        date_fin: '',
-        motif: ''
-      });
       setShowForm(false);
-    }, 300); // Duration of SlideDown animation
+      setFormData({ employe_id: '', date_debut: '', date_fin: '', motif: '' });
+    }, 300);
   };
 
-  // Toggle form visibility with animation
-  const toggleForm = () => {
+  const toggleFormVisibility = () => {
     if (showForm) {
-      resetForm();
+      resetFormAndHide();
     } else {
+      setFormData({ employe_id: '', date_debut: '', date_fin: '', motif: '' });
       setShowForm(true);
-      setTimeout(() => setFormAnimation(true), 50); // Small delay for animation to start
+      setTimeout(() => setFormAnimation(true), 50);
     }
   };
 
-  // Handle sorting
   const handleSort = (field) => {
-    let actualField = field;
-    if (field === 'employe.nom') actualField = 'employeeName'; // Special handling for nested field
-
-    if (sortField === actualField) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(actualField);
-      setSortDirection('asc');
-    }
+    const newDirection = (sortField === field && sortDirection === 'asc') ? 'desc' : 'asc';
+    setSortField(field); setSortDirection(newDirection);
   };
 
-  // Filter and sort absences
   const sortedAndFilteredAbsences = [...absences]
-    .map(absence => ({
-        ...absence,
-        // Add a sortable employee name field if it doesn't exist at top level
-        employeeName: absence.employee?.nom?.toLowerCase() || '' 
-    }))
     .filter(absence => {
-      const employee = absence.employee;
       const searchTermLower = searchTerm.toLowerCase();
-      const matchesSearch = 
-        (employee?.nom.toLowerCase().includes(searchTermLower) ||
-        employee?.email.toLowerCase().includes(searchTermLower) ||
-        absence.motif.toLowerCase().includes(searchTermLower));
-      
+      const matchesSearch = (
+        absence.employeeName?.toLowerCase().includes(searchTermLower) ||
+        absence.employeeEmail?.toLowerCase().includes(searchTermLower) ||
+        absence.motif.toLowerCase().includes(searchTermLower)
+      );
       if (filterStatus === 'all') return matchesSearch;
       if (filterStatus === 'justified') return matchesSearch && absence.justifiee === true;
       if (filterStatus === 'unjustified') return matchesSearch && absence.justifiee === false;
       if (filterStatus === 'pending') return matchesSearch && absence.justifiee === null;
-      return true;
+      return true; // Should not happen if filterStatus is one of the above
     })
     .sort((a, b) => {
-      let valA = a[sortField];
-      let valB = b[sortField];
-
+      let valA = a[sortField]; let valB = b[sortField];
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
-      
-      if (sortDirection === 'asc') {
-        return valA > valB ? 1 : (valA < valB ? -1 : 0);
-      } else {
-        return valA < valB ? 1 : (valA > valB ? -1 : 0);
-      }
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
     });
 
-  // Format date to French format
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
-
-  // Calculate duration of absence in days
+  const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
   const calculateDuration = (startDate, endDate) => {
     if (!startDate) return 'N/A';
-    const start = new Date(startDate);
-    // If no end date, or end date is same as start date, it's 1 day
-    const end = endDate ? new Date(endDate) : start; 
-    if (end < start) return 1; // Handle cases where end date might be before start
-
-    const diffTime = Math.abs(end - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
+    const start = new Date(startDate); const end = endDate ? new Date(endDate) : start;
+    if (end < start) return 1;
+    return Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1;
   };
-  
-  const getStats = () => {
-    const total = absences.length;
-    const justified = absences.filter(a => a.justifiee === true).length;
-    const pending = absences.filter(a => a.justifiee === null).length;
-    return { total, justified, pending };
+  const stats = {
+    total: absences.length,
+    justified: absences.filter(a => a.justifiee === true).length,
+    pending: absences.filter(a => a.justifiee === null).length,
   };
-  const stats = getStats();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-      <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="bg-white text-black white px-6 py-4">
-          <h1 className="text-2xl font-bold ">Gestion des Absences</h1>
-        </div>
-        
-        <Notification 
-          show={notification.show} 
-          message={notification.message} 
-          type={notification.type} 
-        />
-        
-        <div className="p-6">
-          {/* Controls */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-              <div className="relative w-full sm:w-auto">
-                <input
-                  type="text"
-                  placeholder="Rechercher (nom, email, motif)..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full md:w-64 focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-              <div className="relative w-full sm:w-auto">
-                <select
-                  className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-indigo-300 focus:border-indigo-500 block w-full p-2.5 pr-10 appearance-none outline-none"
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                >
-                  <option value="all">Tous les statuts</option>
-                  <option value="justified">Justifiées</option>
-                  <option value="unjustified">Non justifiées</option>
-                  <option value="pending">En attente</option>
-                </select>
-                <Filter className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-            
-            <button 
-              onClick={toggleForm}
-              className={`flex items-center px-4 py-2 rounded-lg shadow transition-all duration-200 w-full md:w-auto justify-center ${
-                showForm 
-                  ? 'bg-red-500 hover:bg-red-600 text-white' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-              }`}
+    <> {/* Assuming this is rendered inside MainLayoute's Outlet */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-[#2F4156]">Gestion des Absences</h1>
+        <p className="text-sm text-[#567C8D] mt-1">Suivez et gérez les absences des employés.</p>
+      </div>
+
+      <Notification show={notification.show} message={notification.message} type={notification.type} />
+
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+          <div className="relative w-full sm:w-auto">
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              className="pl-10 pr-4 py-2.5 border border-[#C8D9E6] rounded-lg w-full sm:w-64
+                         focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] transition-all
+                         duration-200 outline-none text-[#2F4156] placeholder-[#567C8D]/70 bg-white text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#567C8D]/80" />
+          </div>
+          <div className="relative w-full sm:w-auto">
+            <select
+              className="bg-white border border-[#C8D9E6] text-[#2F4156] text-sm rounded-lg
+                         focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] block w-full p-2.5 pr-10 
+                         appearance-none outline-none placeholder-[#567C8D]/70"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
             >
-              {showForm ? (
-                <>
-                  <X className="mr-2" size={18} />
-                  <span>Annuler</span>
-                </>
-              ) : (
-                <>
-                  <UserPlus className="mr-2" size={18} /> {/* Changed icon from Plus to UserPlus for consistency */}
-                  <span>Ajouter une absence</span>
-                </>
-              )}
-            </button>
+              <option value="all">Tous les statuts</option>
+              <option value="justified">Justifiées</option>
+              <option value="unjustified">Non justifiées</option>
+              <option value="pending">En attente</option>
+            </select>
+            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#567C8D]/80 pointer-events-none" />
           </div>
-          
-          {/* Absence Form */}
-          <SlideDown isVisible={showForm}>
-            <div className={`bg-gray-50 rounded-lg shadow-inner p-6 mb-8 transition-all duration-500 ${formAnimation ? 'opacity-100' : 'opacity-0'}`}>
-              <h2 className="text-xl font-semibold mb-6 text-indigo-700 border-b pb-2">
-                Ajouter une absence
-              </h2>
-              
-              <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <label className="block text-sm font-medium text-gray-700">Employé *</label>
-                    <select
-                      name="employe_id"
-                      value={formData.employe_id}
-                      onChange={handleChange}
-                      required
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                    >
-                      <option value="">Sélectionner un employé</option>
-                      {employees.map(employee => (
-                        <option key={employee.id} value={employee.id}>
-                          {employee.nom} ({employee.email})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <label className="block text-sm font-medium text-gray-700">Motif *</label>
-                    <input
-                      type="text"
-                      name="motif"
-                      value={formData.motif}
-                      onChange={handleChange}
-                      required
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                      placeholder="Motif de l'absence"
-                    />
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <label className="block text-sm font-medium text-gray-700">Date de début *</label>
+        </div>
+
+        <button
+          onClick={toggleFormVisibility}
+          className={`flex items-center px-5 py-2.5 rounded-lg shadow-md transition-all duration-200
+                     w-full md:w-auto justify-center transform hover:scale-[1.02] active:scale-95
+                     text-white font-medium text-sm
+                     ${showForm
+                       ? 'bg-red-500 hover:bg-red-600' // Keeping red for cancel
+                       : 'bg-[#567C8D] hover:bg-[#4A6582]' // Teal base
+                     }`}
+        >
+          {showForm ? (<><X className="mr-2" size={18} />Annuler</>)
+          : (<><Plus className="mr-2" size={18} />Ajouter Absence</>)}
+        </button>
+      </div>
+
+      <SlideDown isVisible={showForm}>
+        <div className={`bg-white border border-[#C8D9E6] rounded-xl shadow-lg p-6 mb-8
+                       transition-opacity duration-300 ${formAnimation ? 'opacity-100' : 'opacity-0'}`}>
+          <h2 className="text-xl font-semibold mb-6 text-[#2F4156] border-b border-[#C8D9E6] pb-3">
+            Ajouter une absence
+          </h2>
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+              {[
+                { label: 'Employé', name: 'employe_id', type: 'select', options: employees, required: true },
+                { label: 'Motif', name: 'motif', type: 'text', placeholder: "Motif de l'absence", required: true },
+                { label: 'Date de début', name: 'date_debut', type: 'date', required: true },
+                { label: 'Date de fin (optionnel)', name: 'date_fin', type: 'date', min: formData.date_debut },
+              ].map(field => (
+                <div className="space-y-1.5" key={field.name}>
+                  <label htmlFor={field.name} className="block text-sm font-medium text-[#2F4156]">
+                    {field.label} {field.required && <span className="text-red-500">*</span>}
+                  </label>
+                  {field.type === 'select' ? (
                     <div className="relative">
-                      <input
-                        type="date"
-                        name="date_debut"
-                        value={formData.date_debut}
+                        <select
+                        id={field.name}
+                        name={field.name}
+                        value={formData[field.name]}
                         onChange={handleChange}
-                        required
-                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                      />
-                      <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <label className="block text-sm font-medium text-gray-700">Date de fin (optionnel)</label>
-                    <div className="relative">
-                      <input
-                        type="date"
-                        name="date_fin"
-                        value={formData.date_fin}
-                        onChange={handleChange}
-                        min={formData.date_debut} // Ensure end date is not before start date
-                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                      />
-                      <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-end gap-3 mt-8">
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors duration-200 flex items-center"
-                  >
-                    <X size={16} className="mr-2" />
-                    Annuler
-                  </button>
-                  
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md shadow-md hover:shadow-lg transition-all duration-200 flex items-center"
-                  >
-                    <Check size={16} className="mr-2" />
-                    Enregistrer
-                  </button>
-                </div>
-              </form>
-            </div>
-          </SlideDown>
-          
-          {/* Absence Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-indigo-100 p-4 rounded-lg shadow-sm">
-              <h3 className="text-sm font-medium text-indigo-800">Total des absences</h3>
-              <p className="text-2xl font-bold">{stats.total}</p>
-            </div>
-            <div className="bg-yellow-100 p-4 rounded-lg shadow-sm">
-              <h3 className="text-sm font-medium text-yellow-800">En attente de justification</h3>
-              <p className="text-2xl font-bold">{stats.pending}</p>
-            </div>
-            <div className="bg-green-100 p-4 rounded-lg shadow-sm">
-              <h3 className="text-sm font-medium text-green-800">Absences justifiées</h3>
-              <p className="text-2xl font-bold">{stats.justified}</p>
-            </div>
-          </div>
-          
-          {/* Absences Table Card */}
-          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-            <div className="border-b bg-gray-50 px-4 py-3">
-              <h2 className="font-medium text-gray-700">Liste des absences</h2>
-            </div>
-            
-            {isLoading ? (
-              <div className="p-4">
-                <SkeletonLoader />
-              </div>
-            ) : error ? (
-              <div className="p-8 text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
-                  <HelpCircle size={32} />
-                </div>
-                <p className="text-lg font-medium text-gray-900">{error}</p>
-                <p className="text-gray-500 mt-2">Veuillez réessayer.</p>
-                <button 
-                  onClick={fetchData}
-                  className="mt-4 flex items-center mx-auto px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-                >
-                  <RefreshCcw className="w-4 h-4 mr-2" />
-                  Réessayer
-                </button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                    <tr>
-                      <th 
-                        className="py-3 px-4 text-left font-medium text-gray-500 tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => handleSort('employe.nom')}
-                      >
-                        <div className="flex items-center">
-                          Employé
-                          {sortField === 'employeeName' && (
-                            <ChevronDown 
-                              className={`ml-1 w-4 h-4 transition-transform duration-200 ${
-                                sortDirection === 'desc' ? 'transform rotate-180' : ''
-                              }`} 
-                            />
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="py-3 px-4 text-left font-medium text-gray-500 tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => handleSort('date_debut')}
-                      >
-                        <div className="flex items-center">
-                          Dates
-                          {sortField === 'date_debut' && (
-                            <ChevronDown 
-                              className={`ml-1 w-4 h-4 transition-transform duration-200 ${
-                                sortDirection === 'desc' ? 'transform rotate-180' : ''
-                              }`} 
-                            />
-                          )}
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-left font-medium text-gray-500 tracking-wider hidden sm:table-cell">Durée</th>
-                      <th 
-                        className="py-3 px-4 text-left font-medium text-gray-500 tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => handleSort('motif')}
-                      >
-                        <div className="flex items-center">
-                          Motif
-                          {sortField === 'motif' && (
-                            <ChevronDown 
-                              className={`ml-1 w-4 h-4 transition-transform duration-200 ${
-                                sortDirection === 'desc' ? 'transform rotate-180' : ''
-                              }`} 
-                            />
-                          )}
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-left font-medium text-gray-500 tracking-wider">Statut</th>
-                      <th className="py-3 px-4 text-left font-medium text-gray-500 tracking-wider hidden md:table-cell">Impact Salaire</th>
-                      <th className="py-3 px-4 text-center font-medium text-gray-500 tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 text-sm text-gray-700">
-                    {sortedAndFilteredAbsences.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
-                          <div className="flex flex-col items-center justify-center">
-                            <Search className="h-8 w-8 text-gray-400 mb-2" />
-                            <p className="text-lg font-medium">Aucune absence trouvée</p>
-                            <p className="text-sm text-gray-500">Essayez avec d'autres filtres ou termes de recherche</p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      sortedAndFilteredAbsences.map((absence, index) => (
-                        <tr 
-                          key={absence.id} 
-                          className="hover:bg-blue-50 transition-colors duration-150"
-                          style={{ 
-                            animationDelay: `${index * 50}ms`,
-                            animation: 'fadeIn 0.5s ease-in-out forwards'
-                          }}
+                        required={field.required}
+                        className="w-full p-2.5 border border-[#C8D9E6] rounded-md 
+                                    focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] 
+                                    transition-all duration-200 outline-none text-[#2F4156] bg-white appearance-none pr-8"
                         >
-                          <td className="py-3 px-4 font-medium text-gray-900">
-                            {absence.employee?.nom || 'N/A'}
-                            <div className="text-xs text-gray-500">{absence.employee?.email || ''}</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            {formatDate(absence.date_debut)}
-                            {absence.date_fin && absence.date_fin !== absence.date_debut && (
-                              <> - {formatDate(absence.date_fin)}</>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 hidden sm:table-cell">
-                            {calculateDuration(absence.date_debut, absence.date_fin)} jour(s)
-                          </td>
-                          <td className="py-3 px-4 truncate max-w-xs">{absence.motif || <span className="text-gray-400">Non spécifié</span>}</td>
-                          <td className="py-3 px-4">
-                            {absence.justifiee === true && (
-                              <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">
-                                Justifiée
-                              </span>
-                            )}
-                            {absence.justifiee === false && (
-                              <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full">
-                                Non justifiée
-                              </span>
-                            )}
-                            {absence.justifiee === null && (
-                              <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded-full">
-                                En attente
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 hidden md:table-cell">
-                            {absence.impact_salaire === true ? (
-                              <span className="text-red-600 font-medium">Oui</span>
-                            ) : absence.impact_salaire === false ? (
-                              <span className="text-green-600 font-medium">Non</span>
-                            ) : (
-                              <span className="text-gray-500">-</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex justify-center gap-2">
-                              <button
-                                onClick={() => handleJustificationChange(absence.id, true)}
-                                disabled={absence.justifiee === true}
-                                className={`p-1.5 rounded-md transition-colors duration-200 ${
-                                  absence.justifiee === true 
-                                    ? 'bg-green-200 text-green-700 cursor-not-allowed' 
-                                    : 'bg-green-100 text-green-600 hover:bg-green-200'
-                                }`}
-                                title="Marquer comme justifiée"
-                              >
-                                <Check size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleJustificationChange(absence.id, false)}
-                                disabled={absence.justifiee === false}
-                                className={`p-1.5 rounded-md transition-colors duration-200 ${
-                                  absence.justifiee === false
-                                    ? 'bg-red-200 text-red-700 cursor-not-allowed'
-                                    : 'bg-red-100 text-red-600 hover:bg-red-200'
-                                }`}
-                                title="Marquer comme non justifiée"
-                              >
-                                <X size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          
-          {/* Pagination - Static for demonstration */}
-          {!isLoading && sortedAndFilteredAbsences.length > 0 && (
-            <div className="flex items-center justify-between mt-6 bg-white p-4 rounded-lg shadow-sm">
-              <div className="text-sm text-gray-500">
-                Affichage de {sortedAndFilteredAbsences.length} sur {absences.length} absences
-              </div>
-              {/* Basic pagination example, would need actual logic for multiple pages */}
-              <div className="flex space-x-1">
-                <button className="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled> 
-                  Précédent
-                </button>
-                <button className="px-3 py-1 bg-indigo-600 border border-indigo-600 rounded-md text-sm text-white">
-                  1
-                </button>
-                <button className="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>
-                  Suivant
-                </button>
-              </div>
+                        <option value="">Sélectionner...</option>
+                        {field.options?.map(opt => (
+                            <option key={opt.id} value={opt.id}>{opt.nom}</option>
+                        ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#567C8D]/80 pointer-events-none" />
+                    </div>
+                  ) : (
+                    <div className="relative">
+                        <input
+                        id={field.name}
+                        type={field.type}
+                        name={field.name}
+                        value={formData[field.name]}
+                        onChange={handleChange}
+                        required={field.required}
+                        min={field.min}
+                        placeholder={field.placeholder || ''}
+                        className="w-full p-2.5 border border-[#C8D9E6] rounded-md 
+                                    focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] 
+                                    transition-all duration-200 outline-none text-[#2F4156] bg-white"
+                        />
+                        {field.type === 'date' && <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#567C8D]/80 pointer-events-none" />}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
+            <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-[#C8D9E6]">
+              <button type="button" onClick={resetFormAndHide}
+                className="px-4 py-2 bg-[#C8D9E6]/50 hover:bg-[#C8D9E6]/80 text-[#2F4156] rounded-md 
+                           transition-colors duration-200 flex items-center font-medium text-sm">
+                <X size={16} className="mr-2" /> Annuler
+              </button>
+              <button type="submit"
+                className="px-5 py-2 bg-[#2F4156] hover:bg-[#3b5068] text-white rounded-md shadow-md 
+                           hover:shadow-lg transition-all duration-200 flex items-center font-medium text-sm">
+                <Check size={16} className="mr-2" /> Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </SlideDown>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+        <div className="bg-white border border-[#C8D9E6] p-5 rounded-xl shadow-sm">
+          <h3 className="text-sm font-medium text-[#567C8D]">Total des absences</h3>
+          <p className="text-3xl font-bold text-[#2F4156] mt-1">{stats.total}</p>
+        </div>
+        <div className="bg-white border border-[#C8D9E6] p-5 rounded-xl shadow-sm">
+          <h3 className="text-sm font-medium text-[#567C8D]">En attente</h3>
+          <p className="text-3xl font-bold text-[#2F4156] mt-1">{stats.pending}</p>
+        </div>
+        <div className="bg-white border border-[#C8D9E6] p-5 rounded-xl shadow-sm">
+          <h3 className="text-sm font-medium text-[#567C8D]">Justifiées</h3>
+          <p className="text-3xl font-bold text-[#2F4156] mt-1">{stats.justified}</p>
         </div>
       </div>
+
+      <div className="bg-white border border-[#C8D9E6] rounded-xl shadow-lg overflow-hidden">
+        <div className="border-b border-[#C8D9E6] bg-[#F5EFEB]/80 px-5 py-3.5">
+          <h2 className="font-semibold text-[#2F4156]">Liste des absences</h2>
+        </div>
+
+        {isLoading ? ( <div className="p-4"><SkeletonLoader /></div> )
+        : error ? (
+          <div className="p-12 text-center flex flex-col items-center">
+            <HelpCircle size={40} className="text-red-500 mb-4" />
+            <p className="text-xl font-medium text-[#2F4156]">{error}</p>
+            <p className="text-[#567C8D] mt-2">Veuillez vérifier votre connexion ou réessayer plus tard.</p>
+            <button onClick={fetchData} className="mt-6 px-4 py-2 bg-[#567C8D] text-white rounded-lg hover:bg-[#4A6582] transition-colors text-sm font-medium">
+              <RefreshCcw className="w-4 h-4 mr-2 inline-block" /> Réessayer
+            </button>
+          </div>
+        )
+        : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-[#C8D9E6]/30">
+                  {/* Table Headers */}
+                  {['Employé', 'Dates', 'Durée', 'Motif', 'Statut', 'Impact Salaire'].map(headerText => {
+                    const fieldKey = {
+                        'Employé': 'employeeName', 'Dates': 'date_debut', 'Durée': 'duration', // duration isn't directly sortable on backend
+                        'Motif': 'motif', 'Statut': 'justifiee', 'Impact Salaire': 'impact_salaire'
+                    }[headerText];
+                    const isSortable = ['employeeName', 'date_debut', 'motif'].includes(fieldKey); // Define which are sortable
+                    const hiddenSm = ['Durée', 'Impact Salaire'].includes(headerText);
+                    const hiddenMd = ['Impact Salaire'].includes(headerText);
+
+                    return (
+                        <th
+                        key={headerText}
+                        className={`py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase 
+                                    tracking-wider ${isSortable ? 'cursor-pointer hover:bg-[#C8D9E6]/60' : ''} transition-colors
+                                    ${hiddenMd ? 'hidden md:table-cell' : (hiddenSm ? 'hidden sm:table-cell' : '')}
+                                    `}
+                        onClick={() => isSortable && handleSort(fieldKey)}
+                        >
+                        <div className="flex items-center">
+                            {headerText}
+                            {isSortable && sortField === fieldKey && (
+                            <ChevronDown className={`ml-1.5 w-3.5 h-3.5 transition-transform duration-200 text-[#567C8D] ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} />
+                            )}
+                        </div>
+                        </th>
+                    );
+                  })}
+                  <th className="py-3 px-4 text-center text-xs font-semibold text-[#2F4156] uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#C8D9E6]/70">
+                {sortedAndFilteredAbsences.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-4 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <Search className="h-12 w-12 text-[#C8D9E6] mb-3" />
+                        <p className="text-lg font-medium text-[#2F4156]">Aucune absence trouvée</p>
+                        <p className="text-sm text-[#567C8D]">Vérifiez vos filtres ou ajoutez de nouvelles absences.</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  sortedAndFilteredAbsences.map((absence, index) => (
+                    <tr key={absence.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150 text-sm">
+                      <td className="py-3 px-4 text-[#2F4156] font-medium">
+                        {absence.employeeName || 'N/A'}
+                        <div className="text-xs text-[#567C8D]">{absence.employeeEmail || ''}</div>
+                      </td>
+                      <td className="py-3 px-4 text-[#567C8D]">
+                        {formatDate(absence.date_debut)}
+                        {absence.date_fin && absence.date_fin !== absence.date_debut && (<> - {formatDate(absence.date_fin)}</>)}
+                      </td>
+                      <td className="py-3 px-4 text-[#567C8D] hidden sm:table-cell">
+                        {calculateDuration(absence.date_debut, absence.date_fin)}j
+                      </td>
+                      <td className="py-3 px-4 text-[#2F4156] truncate max-w-xs">{absence.motif || <span className="text-[#C8D9E6]">N/A</span>}</td>
+                      <td className="py-3 px-4">
+                        {absence.justifiee === true && (<span className="bg-[#567C8D]/20 text-[#2F4156] text-xs font-semibold px-2.5 py-1 rounded-full">Justifiée</span>)}
+                        {absence.justifiee === false && (<span className="bg-red-500/10 text-red-700 text-xs font-semibold px-2.5 py-1 rounded-full">Non justifiée</span>)}
+                        {absence.justifiee === null && (<span className="bg-yellow-500/10 text-yellow-700 text-xs font-semibold px-2.5 py-1 rounded-full">En attente</span>)}
+                      </td>
+                      <td className="py-3 px-4 text-[#567C8D] hidden md:table-cell">
+                        {absence.impact_salaire === true ? (<span className="text-red-600 font-medium">Oui</span>)
+                         : absence.impact_salaire === false ? (<span className="text-green-600 font-medium">Non</span>)
+                         : (<span className="text-[#C8D9E6]">-</span>)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex justify-center items-center gap-1.5">
+                          <button
+                            onClick={() => handleJustificationChange(absence.id, true)}
+                            disabled={absence.justifiee === true}
+                            className={`p-1.5 rounded-md transition-colors duration-150 ${
+                              absence.justifiee === true ? 'text-green-400 cursor-not-allowed opacity-60' : 'text-green-600 hover:bg-green-500/20 hover:text-green-700'}`}
+                            title="Marquer comme justifiée"
+                          > <Check size={16} /> </button>
+                          <button
+                            onClick={() => handleJustificationChange(absence.id, false)}
+                            disabled={absence.justifiee === false}
+                            className={`p-1.5 rounded-md transition-colors duration-150 ${
+                              absence.justifiee === false ? 'text-red-400 cursor-not-allowed opacity-60' : 'text-red-600 hover:bg-red-500/20 hover:text-red-700'}`}
+                            title="Marquer comme non justifiée"
+                          > <X size={16} /> </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {!isLoading && sortedAndFilteredAbsences.length > 0 && (
+        <div className="flex items-center justify-between mt-6 bg-white border border-[#C8D9E6] p-4 rounded-xl shadow-sm">
+          <div className="text-sm text-[#567C8D]">
+            Affichage de <span className="font-semibold text-[#2F4156]">{sortedAndFilteredAbsences.length}</span> sur <span className="font-semibold text-[#2F4156]">{absences.length}</span> absences
+          </div>
+          <div className="flex space-x-1">
+            <button className="px-3 py-1.5 bg-white border border-[#C8D9E6] rounded-md text-xs font-medium text-[#567C8D] hover:bg-[#C8D9E6]/30 disabled:opacity-50" disabled>Précédent</button>
+            <button className="px-3 py-1.5 bg-[#567C8D] border border-[#567C8D] rounded-md text-xs font-medium text-white">1</button>
+            <button className="px-3 py-1.5 bg-white border border-[#C8D9E6] rounded-md text-xs font-medium text-[#567C8D] hover:bg-[#C8D9E6]/30 disabled:opacity-50" disabled>Suivant</button>
+          </div>
+        </div>
+      )}
+
+      {/* Global style for fade-in animation for table rows */}
       <style jsx global>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
+          from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        /* Consider adding specific keyframes for table row animations if needed, 
+           but Tailwind's transition classes are often sufficient.
+           The style tag approach is more for one-off complex animations. */
       `}</style>
-    </div>
+    </>
   );
 }

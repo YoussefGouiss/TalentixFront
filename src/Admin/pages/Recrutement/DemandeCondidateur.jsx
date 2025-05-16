@@ -1,359 +1,473 @@
-import { useState, useEffect } from "react";
-import { AlertCircle, Check, X, FileText, Mail, Phone, User, Calendar } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import {
+  FaExclamationCircle, FaCheck, FaTimes, FaFileAlt, FaEnvelope, FaPhone, FaUser, FaCalendarAlt,
+  FaSpinner, FaCheckCircle, FaTimesCircle, FaEye, FaArrowLeft, FaUserTie // Added FaUserTie for avatar
+} from 'react-icons/fa'; // Updated icons
+
+// Re-using the ThemedNotification
+const ThemedNotification = ({ message, type, show, onDismiss }) => {
+  if (!show) return null;
+  let bgColor, textColor, borderColor, Icon;
+  switch (type) {
+    case 'success':
+      bgColor = 'bg-green-500'; textColor = 'text-white'; borderColor = 'border-green-700'; Icon = FaCheckCircle;
+      break;
+    case 'error':
+      bgColor = 'bg-red-500'; textColor = 'text-white'; borderColor = 'border-red-700'; Icon = FaTimesCircle;
+      break;
+    default:
+      bgColor = 'bg-blue-500'; textColor = 'text-white'; borderColor = 'border-blue-700'; Icon = FaCheckCircle;
+  }
+  return (
+    <div
+      className={`fixed top-5 right-5 z-[100] p-4 rounded-lg shadow-xl transform transition-all duration-500 ease-in-out
+                  ${show ? 'translate-y-0 opacity-100' : '-translate-y-16 opacity-0 pointer-events-none'}
+                  ${bgColor} ${textColor} border-l-4 ${borderColor} flex items-center justify-between`}
+    >
+      <div className="flex items-center">
+        <Icon size={20} className="mr-3 flex-shrink-0" />
+        <span className="text-sm font-medium">{message}</span>
+      </div>
+      {onDismiss && (
+        <button onClick={onDismiss} className="ml-4 text-current hover:opacity-75">
+          <FaTimes size={18} />
+        </button>
+      )}
+    </div>
+  );
+};
+
+// Themed Modal for Rejection
+const RejectionModal = ({ isOpen, onClose, title, children, onSubmit, justification, setJustification, isSubmitting }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white border border-[#C8D9E6] rounded-xl shadow-lg w-full max-w-md p-6 transform transition-all">
+        <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#C8D9E6]">
+          <h3 className="text-xl font-semibold text-[#2F4156]">{title}</h3>
+          <button onClick={onClose} className="text-[#567C8D] hover:text-[#2F4156]">
+            <FaTimesCircle size={24} />
+          </button>
+        </div>
+        <div className="space-y-4">
+          {children}
+          <textarea
+            className="w-full p-2.5 border border-[#C8D9E6] rounded-md shadow-sm h-28
+                       focus:ring-1 focus:ring-red-500 focus:border-red-500 
+                       transition-colors outline-none text-[#2F4156] bg-white"
+            placeholder="Veuillez fournir une justification pour le rejet..."
+            value={justification}
+            onChange={(e) => setJustification(e.target.value)}
+            disabled={isSubmitting}
+          ></textarea>
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[#C8D9E6]">
+            <button
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-[#E2E8F0] hover:bg-[#CBD5E1] text-[#2F4156] rounded-md 
+                         transition-colors duration-200 flex items-center font-medium text-sm disabled:opacity-70"
+            > <FaTimes size={16} className="mr-2" /> Annuler </button>
+            <button
+              onClick={onSubmit}
+              disabled={!justification.trim() || isSubmitting}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md shadow-md 
+                         transition-all duration-200 flex items-center font-semibold text-sm disabled:opacity-60"
+            >
+              {isSubmitting ? <FaSpinner size={18} className="animate-spin mr-2" /> : <FaCheckCircle size={18} className="mr-2" />}
+              Confirmer Rejet
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 export default function DemandeCondidateur() {
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [justification, setJustification] = useState("");
-  const [actionStatus, setActionStatus] = useState(null);
-  const [viewMode, setViewMode] = useState("list"); // "list" or "detail"
+  const [actionStatus, setActionStatus] = useState({ type: '', message: '' }); // Combined success/error for notification
+  const [isSubmitting, setIsSubmitting] = useState(false); // For modal submit button
+  const [viewMode, setViewMode] = useState("list");
+
+  const API_URL = "http://localhost:8000/api/admin/condidateurs";
 
   useEffect(() => {
     fetchCandidates();
   }, []);   
 
+  useEffect(() => {
+    let timer;
+    if (actionStatus.message) {
+      timer = setTimeout(() => setActionStatus({ type: '', message: '' }), 3000);
+    }
+    return () => clearTimeout(timer);
+  }, [actionStatus]);
+
   const fetchCandidates = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch("http://localhost:8000/api/admin/condidateurs",{
+      const response = await fetch(API_URL, {
         method : 'GET',
-          headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-                    'Content-Type': 'application/json',
-                }
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        }
       });
       if (!response.ok) {
-        throw new Error("Failed to fetch candidates");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Impossible de récupérer les candidatures.");
       }
       const data = await response.json();
-      setCandidates(data);
+      setCandidates(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
+      setCandidates([]);
     } finally {
       setLoading(false);
     }
   };
 
   const updateCandidateStatus = async (id, status) => {
+    setIsSubmitting(true);
+    setError(null);
+    setActionStatus({ type: '', message: '' });
     try {
       const payload = { statut: status };
       if (status === "rejete") {
         payload.justification = justification;
       }
 
-      const response = await fetch(`http://localhost:8000/api/admin/condidateurs/${id}`, {
+      const response = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
-         headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-                    'Content-Type': 'application/json',
-                },
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: JSON.stringify(payload),
       });
 
+      const responseData = await response.json();
       if (!response.ok) {
-        throw new Error("Failed to update candidate status");
+        throw new Error(responseData.message || "Échec de la mise à jour du statut.");
       }
 
-      // Update local state to reflect the change
-      setCandidates(
-        candidates.map((candidate) =>
-          candidate.id === id
-            ? { 
-                ...candidate, 
-                statut: status, 
-                justification: status === "rejete" ? justification : null 
-              }
-            : candidate
-        )
+      // Update local state
+      const updatedCandidates = candidates.map((candidate) =>
+        candidate.id === id
+          ? { ...responseData } // Use data from API response for full update
+          : candidate
       );
+      setCandidates(updatedCandidates);
+      
+      // Update selectedCandidate if it's the one being updated
+      if (selectedCandidate && selectedCandidate.id === id) {
+          setSelectedCandidate({ ...responseData });
+      }
 
-      setActionStatus({ type: "success", message: `Candidat ${status} avec succès` });
-      setShowModal(false);
+      setActionStatus({ type: "success", message: `Candidat ${status === 'accepte' ? 'accepté(e)' : 'rejeté(e)'} avec succès` });
+      setShowRejectionModal(false);
       setJustification("");
-      setTimeout(() => setActionStatus(null), 3000);
     } catch (err) {
       setActionStatus({ type: "error", message: err.message });
-      setTimeout(() => setActionStatus(null), 3000);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleStatusChange = (candidate, status) => {
-    setSelectedCandidate(candidate);
+    setSelectedCandidate(candidate); // Ensure selectedCandidate is set for modal
     if (status === "rejete") {
-      setShowModal(true);
+      setJustification(candidate.justification || ""); // Pre-fill if exists
+      setShowRejectionModal(true);
     } else {
       updateCandidateStatus(candidate.id, status);
     }
   };
 
+  const handleSubmitRejection = () => {
+    if (selectedCandidate) {
+      updateCandidateStatus(selectedCandidate.id, "rejete");
+    }
+  };
+
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    if (!dateString) return 'N/A';
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('fr-FR', options);
   };
 
   const getStatusBadgeClass = (status) => {
+    // Themed badge styles
     switch (status) {
       case "accepte":
-        return "bg-green-100 text-green-800";
+        return "text-green-700 bg-green-100 border-green-300";
       case "rejete":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-yellow-100 text-yellow-800";
+        return "text-red-700 bg-red-100 border-red-300";
+      default: // en attente
+        return "text-yellow-700 bg-yellow-100 border-yellow-300";
     }
   };
 
   const viewCandidate = (candidate) => {
     setSelectedCandidate(candidate);
     setViewMode("detail");
+    window.scrollTo(0,0); // Scroll to top when viewing details
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-xl">Chargement des candidats...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="bg-red-100 text-red-800 p-4 rounded-lg max-w-lg mx-auto">
-          <div className="flex items-center">
-            <AlertCircle className="mr-2" />
-            <span>Erreur: {error}</span>
+  const MainContent = () => {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center py-20">
+          <div className="text-center">
+            <FaSpinner size={32} className="animate-spin text-[#567C8D] mx-auto mb-3" />
+            <p className="text-[#567C8D]">Chargement des candidatures...</p>
           </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (viewMode === "detail" && selectedCandidate) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <button 
-          onClick={() => setViewMode("list")}
-          className="mb-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded inline-flex items-center"
-        >
-          ← Retour à la liste
-        </button>
-        
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="border-b pb-4 mb-6">
-            <h1 className="text-2xl font-bold mb-2">{selectedCandidate.nom} {selectedCandidate.prenom}</h1>
-            <div className="inline-block px-3 py-1 text-sm rounded-full mb-4 font-semibold mr-2 mt-2 
-              ${getStatusBadgeClass(selectedCandidate.statut)}">
-              {selectedCandidate.statut}
-            </div>
-          </div>
+    if (error && !loading) {
+      return (
+        <div className="p-10 text-center flex flex-col items-center">
+          <FaExclamationCircle size={40} className="mx-auto text-red-500 mb-4" />
+          <p className="text-xl font-medium text-[#2F4156]">{error}</p>
+          <p className="text-[#567C8D] mt-2">Impossible de charger les données. Veuillez réessayer.</p>
+          <button
+              onClick={fetchCandidates}
+              className="mt-6 px-4 py-2 bg-[#567C8D] text-white rounded-lg hover:bg-[#4A6582] transition-colors text-sm font-medium"
+          > Réessayer </button>
+        </div>
+      );
+    }
+
+    if (viewMode === "detail" && selectedCandidate) {
+      return (
+        <div className="p-6">
+          <button 
+            onClick={() => setViewMode("list")}
+            className="mb-6 flex items-center gap-2 px-4 py-2 bg-[#E2E8F0] hover:bg-[#CBD5E1] text-[#2F4156] rounded-md shadow-sm transition-colors text-sm font-medium"
+          > <FaArrowLeft size={16} /> Retour à la liste </button>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <div className="flex items-center mb-4">
-                <Mail className="text-gray-500 mr-2" />
-                <span>{selectedCandidate.email}</span>
+          <div className="bg-white border border-[#C8D9E6] rounded-xl shadow-lg p-6 md:p-8">
+            <div className="border-b border-[#C8D9E6]/70 pb-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-[#2F4156]">{selectedCandidate.nom} {selectedCandidate.prenom}</h2>
+                <p className="text-sm text-[#567C8D]">{selectedCandidate.poste_candidate || 'Poste non spécifié'}</p>
               </div>
-              <div className="flex items-center mb-4">
-                <Phone className="text-gray-500 mr-2" />
-                <span>{selectedCandidate.telephone}</span>
+              <span className={`mt-2 sm:mt-0 inline-block px-3 py-1.5 text-xs font-semibold rounded-full border ${getStatusBadgeClass(selectedCandidate.statut)}`}>
+                {selectedCandidate.statut.charAt(0).toUpperCase() + selectedCandidate.statut.slice(1)}
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
+              <div className="space-y-3">
+                <div className="flex items-center text-[#2F4156]">
+                  <FaEnvelope className="text-[#567C8D] mr-3" size={15}/>
+                  <a href={`mailto:${selectedCandidate.email}`} className="hover:underline">{selectedCandidate.email}</a>
+                </div>
+                <div className="flex items-center text-[#2F4156]">
+                  <FaPhone className="text-[#567C8D] mr-3" size={15}/>
+                  <span>{selectedCandidate.telephone}</span>
+                </div>
+                <div className="flex items-center text-[#2F4156]">
+                  <FaCalendarAlt className="text-[#567C8D] mr-3" size={15}/>
+                  <span>Postulé le: {formatDate(selectedCandidate.created_at)}</span>
+                </div>
               </div>
-              <div className="flex items-center mb-4">
-                <Calendar className="text-gray-500 mr-2" />
-                <span>Postulé le: {formatDate(selectedCandidate.created_at)}</span>
+              
+              <div className="space-y-2">
+                <h3 className="font-semibold text-[#2F4156] mb-1">Documents:</h3>
+                {selectedCandidate.cv && (
+                  <a 
+                    href={`http://localhost:8000/storage/${selectedCandidate.cv}`} 
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center text-[#567C8D] hover:text-[#2F4156] hover:underline py-1"
+                  > <FaFileAlt className="mr-2 text-blue-500" size={16} /> CV </a>
+                )}
+                {selectedCandidate.lettre_motivation && (
+                  <a 
+                    href={`http://localhost:8000/storage/${selectedCandidate.lettre_motivation}`} 
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center text-[#567C8D] hover:text-[#2F4156] hover:underline py-1"
+                  > <FaFileAlt className="mr-2 text-blue-500" size={16} /> Lettre de motivation </a>
+                )}
+                 {!selectedCandidate.cv && !selectedCandidate.lettre_motivation && (
+                    <p className="text-xs text-[#567C8D] italic">Aucun document fourni.</p>
+                )}
               </div>
             </div>
             
-            <div>
-              <h3 className="font-semibold mb-2">Documents</h3>
-              <div className="flex flex-col space-y-2">
-                <a 
-                  href={`http://localhost:8000/storage/${selectedCandidate.cv}`} 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-blue-600 hover:text-blue-800"
+            {selectedCandidate.statut === 'rejete' && selectedCandidate.justification && (
+              <div className="mt-6 p-3 bg-red-100 rounded-md border border-red-200">
+                <h4 className="font-semibold text-red-700 text-sm mb-1">Justification du rejet:</h4>
+                <p className="text-sm text-red-600">{selectedCandidate.justification}</p>
+              </div>
+            )}
+            
+           {selectedCandidate.statut === "en attente" && (
+            <div className="mt-8 border-t border-[#C8D9E6]/70 pt-6">
+              <h3 className="font-semibold text-[#2F4156] mb-3">Changer le statut:</h3>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  className="flex items-center justify-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-md shadow-sm transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={() => handleStatusChange(selectedCandidate, "accepte")}
+                  disabled={isSubmitting}
                 >
-                  <FileText className="mr-2" size={16} />
-                  CV
-                </a>
-                <a 
-                  href={`http://localhost:8000/storage/${selectedCandidate.lettre_motivation}`} 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                  {isSubmitting && selectedCandidate.statut === 'en attente' ? <FaSpinner size={16} className="animate-spin mr-2" /> : <FaCheck size={16} className="mr-2" />} Accepter
+                </button>
+                <button
+                  className="flex items-center justify-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-md shadow-sm transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={() => handleStatusChange(selectedCandidate, "rejete")} // This opens the modal
+                  disabled={isSubmitting}
                 >
-                  <FileText className="mr-2" size={16} />
-                  Lettre de motivation
-                </a>
+                  <FaTimes size={16} className="mr-2" /> Rejeter
+                </button>
               </div>
             </div>
+            )}
           </div>
-          
-          {selectedCandidate.justification && (
-            <div className="mt-6 p-4 bg-red-50 rounded">
-              <h3 className="font-semibold text-red-800 mb-2">Justification du rejet:</h3>
-              <p>{selectedCandidate.justification}</p>
-            </div>
-          )}
-          
-          <div className="mt-8 border-t pt-6">
-            <h3 className="font-semibold mb-4">Changer le statut:</h3>
-            <div className="flex space-x-4">
-              <button
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded flex items-center disabled:opacity-50"
-                onClick={() => handleStatusChange(selectedCandidate, "accepte")}
-                disabled={selectedCandidate.statut === "accepte"}
-              >
-                <Check size={16} className="mr-1" /> Accepter
-              </button>
-              <button
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded flex items-center disabled:opacity-50"
-                onClick={() => handleStatusChange(selectedCandidate, "rejete")}
-                disabled={selectedCandidate.statut === "rejete"}
-              >
-                <X size={16} className="mr-1" /> Rejeter
-              </button>
-            </div>
+        </div>
+      );
+    }
+
+    // List View
+    return (
+      <div className="p-6">
+        <div className="bg-white border border-[#C8D9E6] rounded-lg shadow-md overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-[#C8D9E6]/30">
+                <tr>
+                  {['Candidat', 'Contact', 'Date Postulation', 'Statut', 'Actions'].map(header => (
+                    <th key={header} className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#C8D9E6]/70">
+                {candidates.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-4 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <FaUserTie size={36} className="text-[#C8D9E6] mb-3" />
+                        <p className="text-lg font-medium text-[#2F4156]">Aucune candidature</p>
+                        <p className="text-sm text-[#567C8D]">Il n'y a pas de candidatures à afficher.</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  candidates.map((candidate) => (
+                    <tr key={candidate.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150">
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-9 w-9 bg-[#C8D9E6]/50 rounded-full flex items-center justify-center">
+                            <FaUserTie className="h-4 w-4 text-[#567C8D]" />
+                          </div>
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-[#2F4156]">{candidate.nom} {candidate.prenom}</div>
+                            <div className="text-xs text-[#567C8D]">{candidate.poste_candidate || 'Non spécifié'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="text-sm text-[#2F4156]">{candidate.email}</div>
+                        <div className="text-xs text-[#567C8D]">{candidate.telephone}</div>
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap text-sm text-[#567C8D]">
+                        {formatDate(candidate.created_at)}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusBadgeClass(candidate.statut)}`}>
+                          {candidate.statut.charAt(0).toUpperCase() + candidate.statut.slice(1)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap text-sm">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => viewCandidate(candidate)}
+                            className="p-1.5 text-[#567C8D] rounded-md hover:bg-[#567C8D]/20 hover:text-[#2F4156] transition-colors"
+                            title="Voir détails"
+                          > <FaEye size={16} /> </button>
+                          
+                          {candidate.statut === "en attente" && (
+                            <>
+                              <button
+                                onClick={() => handleStatusChange(candidate, "accepte")}
+                                disabled={isSubmitting && selectedCandidate?.id === candidate.id}
+                                className="p-1.5 text-green-600 rounded-md hover:bg-green-500/20 hover:text-green-700 transition-colors disabled:opacity-50"
+                                title="Accepter"
+                              > <FaCheck size={16} /> </button>
+                              <button
+                                onClick={() => handleStatusChange(candidate, "rejete")}
+                                disabled={isSubmitting && selectedCandidate?.id === candidate.id}
+                                className="p-1.5 text-red-600 rounded-md hover:bg-red-500/20 hover:text-red-700 transition-colors disabled:opacity-50"
+                                title="Rejeter"
+                              > <FaTimes size={16} /> </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     );
-  }
+  };
+
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Gestion des Candidatures</h1>
+    <>
+      <ThemedNotification 
+        message={actionStatus.message} 
+        type={actionStatus.type || 'info'} // Default to info if type is not set
+        show={!!actionStatus.message} 
+        onDismiss={() => setActionStatus({ type: '', message: '' })}
+      />
       
-      {actionStatus && (
-        <div className={`mb-4 p-4 rounded ${
-          actionStatus.type === "success" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-        }`}>
-          {actionStatus.message}
-        </div>
-      )}
-      
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Candidat
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Contact
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Statut
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {candidates.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                  Aucun candidat trouvé
-                </td>
-              </tr>
-            ) : (
-              candidates.map((candidate) => (
-                <tr key={candidate.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
-                        <User className="h-5 w-5 text-gray-500" />
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {candidate.nom} {candidate.prenom}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{candidate.email}</div>
-                    <div className="text-sm text-gray-500">{candidate.telephone}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(candidate.created_at)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(candidate.statut)}`}>
-                      {candidate.statut}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => viewCandidate(candidate)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        Voir détails
-                      </button>
-                      {candidate.statut === "en attente" && (
-                        <>
-                          <button
-                            onClick={() => handleStatusChange(candidate, "accepte")}
-                            className="text-green-600 hover:text-green-900"
-                          >
-                            Accepter
-                          </button>
-                          <button
-                            onClick={() => handleStatusChange(candidate, "rejete")}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Rejeter
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="max-w-6xl mx-auto my-4 md:my-6 bg-white rounded-xl shadow-lg overflow-hidden border border-[#C8D9E6]">
+        <header className="bg-[#F5EFEB]/80 text-[#2F4156] px-6 py-4 border-b border-[#C8D9E6]">
+          <h1 className="text-2xl font-bold tracking-tight">Gestion des Candidatures</h1>
+          <p className="text-sm text-[#567C8D] mt-0.5">Consultez et gérez les candidatures reçues.</p>
+        </header>
+        
+        <MainContent />
+
+        <footer className="text-center py-3 border-t border-[#C8D9E6] bg-[#F5EFEB]/80 text-xs text-[#567C8D]">
+            Gestion des Candidatures © {new Date().getFullYear()}
+        </footer>
       </div>
 
-      {/* Rejection Justification Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Justification du rejet</h3>
-            <textarea
-              className="w-full p-2 border border-gray-300 rounded mb-4 h-32"
-              placeholder="Veuillez fournir une justification pour le rejet de cette candidature..."
-              value={justification}
-              onChange={(e) => setJustification(e.target.value)}
-            ></textarea>
-            <div className="flex justify-end space-x-2">
-              <button
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-                onClick={() => {
-                  setShowModal(false);
-                  setJustification("");
-                }}
-              >
-                Annuler
-              </button>
-              <button
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-                disabled={!justification.trim()}
-                onClick={() => updateCandidateStatus(selectedCandidate.id, "rejete")}
-              >
-                Confirmer le rejet
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <RejectionModal
+        isOpen={showRejectionModal}
+        onClose={() => {
+          setShowRejectionModal(false);
+          setJustification("");
+          setSelectedCandidate(null); // Clear selected candidate when closing modal without action
+        }}
+        title="Justification du Rejet"
+        onSubmit={handleSubmitRejection}
+        justification={justification}
+        setJustification={setJustification}
+        isSubmitting={isSubmitting}
+      >
+        <p className="text-sm text-[#567C8D]">
+          Pour la candidature de <span className="font-semibold text-[#2F4156]">{selectedCandidate?.nom} {selectedCandidate?.prenom}</span>.
+        </p>
+      </RejectionModal>
+    </>
   );
 }

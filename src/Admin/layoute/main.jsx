@@ -1,31 +1,31 @@
-import React from 'react';
-import Sidebar from './sidebar';
-import Navbar from './navbar';
-import { Outlet } from 'react-router-dom';
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
+import TestSidebar from '../../test';
 
 export default function MainLayoute() {
   const navigate = useNavigate();
-    
+
   useEffect(() => {
-      // Vérifier si le token est présent dans le localStorage
-      const token = localStorage.getItem("admin_token");
-      
-      // Si aucun token n'est trouvé, rediriger vers la page de login
-      if (!token) {
-          navigate("/admin/login");  // Rediriger vers la page de login
-      }
+    const token = localStorage.getItem("admin_token");
+    if (!token) {
+      navigate("/admin/login");
+    }
   }, [navigate]);
+
   return (
-    <div className="flex flex-col ">
-      <Navbar/>
-    <div className="flex flex-1">
-        <Sidebar/>
-        <main className="flex-1 p-4 bg-gray-100">
-      <Outlet/>
-        </main>
-      </div>
+    <div className="flex h-screen overflow-hidden bg-[#F5EFEB]">
+      <TestSidebar />
+
+      <main
+        className="flex-1 flex flex-col overflow-y-auto border-[10px] border-cyan-800"
+        style={{ marginLeft: "112px" }} // match sidebar width
+      >
+        <img src='\public\logo2.png' className='w-48 mt-4 ml-7' />
+        <div className="flex-grow p-6 md:p-8 mt-10">
+            
+          <Outlet />
+        </div>
+      </main>
     </div>
   );
 }

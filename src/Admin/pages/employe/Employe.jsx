@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
+// src/Employee.jsx
+import React, { useState, useEffect, useCallback } from 'react';
 import { Trash2, Edit, UserPlus, X, Check, Search, ChevronDown, HelpCircle, Loader } from 'lucide-react';
 
 // Animated form transition component
 const SlideDown = ({ isVisible, children }) => {
   return (
-    <div 
+    <div
       className={`transition-all duration-300 ease-in-out overflow-hidden ${
-        isVisible ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+        isVisible ? 'max-h-[1000px] opacity-100 py-2' : 'max-h-0 opacity-0 py-0' // Adjust max-h as needed, add py for spacing
       }`}
     >
-      {children}
+      {isVisible && children} {/* Conditionally render children to help with transition and reflow */}
     </div>
   );
 };
@@ -17,44 +18,48 @@ const SlideDown = ({ isVisible, children }) => {
 // Animated notification component
 const Notification = ({ show, message, type }) => {
   return (
-    <div 
-      className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-500 ease-in-out ${
-        show 
-        ? 'translate-y-0 opacity-100' 
-        : '-translate-y-12 opacity-0 pointer-events-none'
+    <div
+      className={`fixed top-5 right-5 z-[100] p-4 rounded-lg shadow-xl transform transition-all duration-500 ease-in-out ${ // Increased z-index
+        show
+        ? 'translate-y-0 opacity-100'
+        : '-translate-y-16 opacity-0 pointer-events-none'
       } ${
-        type === 'success' 
-        ? 'bg-green-100 text-green-800 border-l-4 border-green-500' 
-        : 'bg-red-100 text-red-800 border-l-4 border-red-500'
+        type === 'success'
+        ? 'bg-green-500 text-white border-l-4 border-green-700' // Brighter success
+        : 'bg-red-500 text-white border-l-4 border-red-700'       // Brighter error
       }`}
     >
       <div className="flex items-center">
         {type === 'success' ? (
-          <Check className="h-5 w-5 mr-2" />
+          <Check className="h-5 w-5 mr-3 flex-shrink-0" />
         ) : (
-          <X className="h-5 w-5 mr-2" />
+          <X className="h-5 w-5 mr-3 flex-shrink-0" />
         )}
-        {message}
+        <span className="text-sm font-medium">{message}</span>
       </div>
     </div>
   );
 };
 
-// Skeleton loader component
+// Skeleton loader component - Themed
 const SkeletonLoader = () => {
   return (
-    <div className="animate-pulse">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="flex space-x-4 py-3 border-b">
-          {[...Array(7)].map((_, j) => (
-            <div key={j} className="h-4 bg-gray-200 rounded w-full"></div>
-          ))}
-          <div className="h-8 bg-gray-200 rounded w-16"></div>
+    <div className="animate-pulse p-4">
+      {[...Array(5)].map((_, i) => ( // Increased array for more skeleton rows
+        <div key={i} className="flex space-x-4 py-3.5 border-b border-[#C8D9E6]/40"> {/* Sky Blue border */}
+          <div className="h-5 bg-[#C8D9E6]/60 rounded w-1/5"></div>
+          <div className="h-5 bg-[#C8D9E6]/60 rounded w-1/5"></div>
+          <div className="h-5 bg-[#C8D9E6]/60 rounded w-2/5 md:w-1/5"></div>
+          <div className="h-5 bg-[#C8D9E6]/60 rounded w-1/5 hidden md:block"></div>
+          <div className="h-5 bg-[#C8D9E6]/60 rounded w-1/5 hidden lg:block"></div>
+          <div className="flex-grow h-5 bg-[#C8D9E6]/60 rounded "></div>
+          <div className="h-8 bg-[#C8D9E6]/80 rounded w-20"></div>
         </div>
       ))}
     </div>
   );
 };
+
 
 export default function Employee() {
   const [employees, setEmployees] = useState([]);
@@ -65,10 +70,10 @@ export default function Employee() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState('');
+  const [sortField, setSortField] = useState('nom'); // Default sort
   const [sortDirection, setSortDirection] = useState('asc');
-  const [formAnimation, setFormAnimation] = useState(false);
-  
+  const [formAnimation, setFormAnimation] = useState(false); // To control inner form animation
+
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
@@ -86,600 +91,419 @@ export default function Employee() {
     type: 'success'
   });
 
-  // Base API URL
-  const API_URL = 'http://localhost:8000/api';
+  const API_URL = 'http://localhost:8000/api'; // Ensure this is correct
 
-  // Fetch employees from API
   const fetchEmployees = async () => {
     try {
       setIsLoading(true);
+      setError(null); // Reset error before fetching
       const response = await fetch(`${API_URL}/employes`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`, // Make sure token is valid
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         }
       });
-      
+
       if (!response.ok) {
-        throw new Error('Erreur lors de la récupération des données');
+        const errorData = await response.json().catch(() => ({ message: 'Erreur non spécifiée du serveur' }));
+        throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
       }
-      
+
       const data = await response.json();
-      setEmployees(data.message || []);
-      console.log(data);
-      setError(null);
+      setEmployees(Array.isArray(data.message) ? data.message : (Array.isArray(data) ? data : [])); // Handle various API responses
     } catch (err) {
-      setError('Impossible de charger les données');
+      setError(err.message || 'Impossible de charger les données des employés.');
       console.error('Error fetching employees:', err);
+      setEmployees([]); // Ensure employees is an array on error
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Initialize with API data
   useEffect(() => {
     fetchEmployees();
   }, []);
 
-  // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Show notification
-  const showNotification = (message, type = 'success') => {
+  const showAppNotification = (message, type = 'success') => {
     setNotification({ show: true, message, type });
     setTimeout(() => {
-      setNotification({ show: false, message: '', type: 'success' });
+      setNotification(prev => ({ ...prev, show: false }));
     }, 3000);
   };
 
-  // Handle form submission (Create or Update)
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    
     setIsSubmitting(true);
-    
+
+    const url = editingId ? `${API_URL}/employes/${editingId}` : `${API_URL}/employes`;
+    const method = editingId ? 'PUT' : 'POST';
+
+    // Remove password if it's empty during an update, unless it's explicitly being set
+    const payload = { ...formData };
+    if (editingId && !payload.password) {
+      delete payload.password;
+    }
+
+
     try {
-      if (editingId) {
-        // Update API call
-        const response = await fetch(`${API_URL}/employes/${editingId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
-          },
-          body: JSON.stringify(formData)
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Erreur lors de la mise à jour');
-        }
-        
-        await fetchEmployees();
-        showNotification('Employé mis à jour avec succès');
-      } else {
-        // Create API call
-        const response = await fetch(`${API_URL}/employes`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
-          },
-          body: JSON.stringify(formData)
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Erreur lors de la création');
-        }
-        
-        await fetchEmployees();
-        showNotification('Employé ajouté avec succès');
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.message || responseData.error || `Erreur lors de ${editingId ? 'la mise à jour' : "l'ajout"}`);
       }
-      
-      resetForm();
+
+      await fetchEmployees();
+      showAppNotification(`Employé ${editingId ? 'mis à jour' : 'ajouté'} avec succès`);
+      resetFormAndHide();
     } catch (err) {
-      showNotification(err.message || 'Une erreur est survenue', 'error');
+      showAppNotification(err.message || 'Une erreur est survenue', 'error');
       console.error('Error submitting form:', err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Delete employee
   const handleDelete = async (id) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet employé?')) return;
-    
+
     try {
       const response = await fetch(`${API_URL}/employes/${id}`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
         }
       });
-      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erreur lors de la suppression');
+         const errorData = await response.json().catch(()=>({}));
+        throw new Error(errorData.message || 'Erreur lors de la suppression');
       }
-      
       await fetchEmployees();
-      showNotification('Employé supprimé avec succès');
+      showAppNotification('Employé supprimé avec succès');
     } catch (err) {
-      showNotification(err.message || 'Échec de la suppression', 'error');
+      showAppNotification(err.message || 'Échec de la suppression', 'error');
       console.error('Error deleting employee:', err);
     }
   };
 
-  // Edit employee
   const handleEdit = (employee) => {
     setFormData({
-      nom: employee.nom,
-      prenom: employee.prenom,
-      email: employee.email,
-      telephone: employee.telephone,
-      poste: employee.poste,
-      salaire: employee.salaire,
-      date_entree: employee.date_entree,
-      password: ''
+      nom: employee.nom || '',
+      prenom: employee.prenom || '',
+      email: employee.email || '',
+      telephone: employee.telephone || '',
+      poste: employee.poste || '',
+      salaire: employee.salaire || '',
+      date_entree: employee.date_entree || '',
+      password: '' // Keep password field empty for edit
     });
     setEditingId(employee.id);
-    setShowForm(true);
-    setTimeout(() => setFormAnimation(true), 50);
+    if (!showForm) { // If form isn't shown, trigger the open animation
+        setShowForm(true);
+        setTimeout(() => setFormAnimation(true), 50); // Start inner animation after SlideDown starts
+    } else { // If form is already shown, just update content
+        setFormAnimation(true); // Ensure it's visible if it was closing
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Reset form
-  const resetForm = () => {
-    setFormAnimation(false);
+  const resetFormAndHide = () => {
+    setFormAnimation(false); // Start inner form fade out
     setTimeout(() => {
-      setFormData({
-        nom: '',
-        prenom: '',
-        email: '',
-        telephone: '',
-        poste: '',
-        salaire: '',
-        date_entree: '',
-        password: ''
-      });
+      setShowForm(false); // Start SlideDown collapse
+      setFormData({ nom: '', prenom: '', email: '', telephone: '', poste: '', salaire: '', date_entree: '', password: '' });
       setEditingId(null);
-      setShowForm(false);
-    }, 300);
+    }, 300); // Duration of SlideDown
   };
 
-  // Toggle form visibility with loading state
-  const toggleForm = () => {
+  const toggleFormVisibility = () => {
     if (showForm) {
-      resetForm();
+      resetFormAndHide();
     } else {
+      setEditingId(null); // Ensure we are in "add" mode
+      setFormData({ nom: '', prenom: '', email: '', telephone: '', poste: '', salaire: '', date_entree: '', password: '' });
       setIsAddButtonLoading(true);
-      setTimeout(() => {
+      setTimeout(() => { // Simulate a small delay if needed or just open
         setShowForm(true);
         setTimeout(() => {
-          setFormAnimation(true);
-          setIsAddButtonLoading(false);
-        }, 50);
-      }, 500); // Simulate loading for 500ms
+             setFormAnimation(true); // Trigger inner form animation
+             setIsAddButtonLoading(false);
+        }, 50); // Small delay for SlideDown to start expanding
+      }, 200); // Optional delay for button loading effect
     }
   };
 
-  // Handle sorting
   const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
+    const newDirection = (sortField === field && sortDirection === 'asc') ? 'desc' : 'asc';
+    setSortField(field);
+    setSortDirection(newDirection);
   };
 
-  // Filter and sort employees
-  const sortedAndFilteredEmployees = [...employees]
-    .filter(employee => 
-      employee.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.poste?.toLowerCase().includes(searchTerm.toLowerCase())
+  const sortedAndFilteredEmployees = employees && employees.length > 0 ? [...employees]
+    .filter(employee =>
+      Object.values(employee).some(value =>
+        String(value).toLowerCase().includes(searchTerm.toLowerCase())
+      )
     )
     .sort((a, b) => {
-      if (sortDirection === 'asc') {
-        return a[sortField] > b[sortField] ? 1 : -1;
-      } else {
-        return a[sortField] < b[sortField] ? 1 : -1;
-      }
-    });
+      if (!sortField || !a[sortField] || !b[sortField]) return 0;
+      const valA = typeof a[sortField] === 'string' ? a[sortField].toLowerCase() : a[sortField];
+      const valB = typeof b[sortField] === 'string' ? b[sortField].toLowerCase() : b[sortField];
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    }) : [];
+
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-      <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="bg-white text-black px-6 py-4">
-          <h1 className="text-2xl font-bold">Gestion des Employés</h1>
+    <> {/* Using Fragment as main container is in App.js */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-[#2F4156]">Gestion des Employés</h1>
+        <p className="text-sm text-[#567C8D] mt-1">Gérez les informations et les enregistrements de vos employés.</p>
+      </div>
+
+      <Notification
+        show={notification.show}
+        message={notification.message}
+        type={notification.type}
+      />
+
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="relative w-full md:w-auto">
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            className="pl-10 pr-4 py-2.5 border border-[#C8D9E6] rounded-lg w-full md:w-72
+                       focus:ring-2 focus:ring-[#567C8D]/50 focus:border-[#567C8D] transition-all
+                       duration-200 outline-none text-[#2F4156] placeholder-[#567C8D]/70 bg-white"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#567C8D]/80" />
         </div>
-        
-        <Notification 
-          show={notification.show} 
-          message={notification.message} 
-          type={notification.type} 
-        />
-        
-        <div className="p-6">
-          {/* Controls */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div className="relative w-full md:w-auto">
-              <input
-                type="text"
-                placeholder="Rechercher un employé..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full md:w-64 focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            </div>
-            
-            <button 
-              onClick={toggleForm}
-              disabled={isAddButtonLoading}
-              className={`flex items-center px-4 py-2 rounded-lg shadow transition-all duration-200 w-full md:w-auto justify-center ${
-                showForm 
-                ? 'bg-red-500 hover:bg-red-600 text-white' 
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-              } ${isAddButtonLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
-            >
-              {isAddButtonLoading ? (
-                <>
-                <Loader className="mr-2 animate-spin" size={18} />
-                <span>Chargement...</span>
-                </>
-              ) : showForm ? (
-                <>
-                <X className="mr-2" size={18} />
-                <span>Annuler</span>
-                </>
-              ) : (
-                <>
-                <UserPlus className="mr-2" size={18} />
-                <span>Ajouter un employé</span>
-                </>
-              )}
-            </button>
-          </div>
-          
-          {/* Employee Form */}
-          <SlideDown isVisible={showForm}>
-            <div className={`bg-gray-50 rounded-lg shadow-inner p-6 mb-8 transition-all duration-500 ${formAnimation ? 'opacity-100' : 'opacity-0'}`}>
-              <h2 className="text-xl font-semibold mb-6 text-indigo-700 border-b pb-2">
-                {editingId ? 'Modifier un employé' : 'Ajouter un employé'}
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Nom</label>
-                  <input
-                    type="text"
-                    name="nom"
-                    value={formData.nom}
-                    onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Prénom</label>
-                  <input
-                    type="text"
-                    name="prenom"
-                    value={formData.prenom}
-                    onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Téléphone</label>
-                  <input
-                    type="text"
-                    name="telephone"
-                    value={formData.telephone}
-                    onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Poste</label>
-                  <input
-                    type="text"
-                    name="poste"
-                    value={formData.poste}
-                    onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Salaire</label>
-                  <input
-                    type="number"
-                    name="salaire"
-                    value={formData.salaire}
-                    onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Date d'entrée</label>
-                  <input
-                    type="date"
-                    name="date_entree"
-                    value={formData.date_entree}
-                    onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    {editingId ? 'Nouveau mot de passe (optionnel)' : 'Mot de passe'}
+
+        <button
+          onClick={toggleFormVisibility}
+          disabled={isAddButtonLoading}
+          className={`flex items-center px-5 py-2.5 rounded-lg shadow-md transition-all duration-200
+                     w-full md:w-auto justify-center transform hover:scale-[1.02] active:scale-95
+                     text-white font-medium text-sm
+                     ${showForm
+                       ? 'bg-red-500 hover:bg-red-600'
+                       : 'bg-[#567C8D] hover:bg-[#4A6582]'
+                     }
+                     ${isAddButtonLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+        >
+          {isAddButtonLoading ? (<><Loader className="mr-2 animate-spin" size={18} /> Chargement...</>)
+          : showForm ? ( <><X className="mr-2" size={18} /> Annuler</> )
+          : ( <><UserPlus className="mr-2" size={18} /> Ajouter</> )}
+        </button>
+      </div>
+
+      <SlideDown isVisible={showForm}>
+        <div className={`bg-white border border-[#C8D9E6] rounded-xl shadow-lg p-6 mb-8
+                       transition-opacity duration-300 ${formAnimation ? 'opacity-100' : 'opacity-0'}`}>
+          <h2 className="text-xl font-semibold mb-6 text-[#2F4156] border-b border-[#C8D9E6] pb-3">
+            {editingId ? 'Modifier un employé' : 'Ajouter un employé'}
+          </h2>
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+              {[
+                { label: 'Nom', name: 'nom', type: 'text', required: true },
+                { label: 'Prénom', name: 'prenom', type: 'text', required: true },
+                { label: 'Email', name: 'email', type: 'email', required: true },
+                { label: 'Téléphone', name: 'telephone', type: 'text' },
+                { label: 'Poste', name: 'poste', type: 'text', required: true },
+                { label: 'Salaire (€)', name: 'salaire', type: 'number' },
+                { label: "Date d'entrée", name: 'date_entree', type: 'date', required: true },
+                { label: editingId ? 'Nouveau mot de passe (optionnel)' : 'Mot de passe', name: 'password', type: 'password', required: !editingId },
+              ].map(field => (
+                <div className="space-y-1.5" key={field.name}>
+                  <label htmlFor={field.name} className="block text-sm font-medium text-[#2F4156]">
+                    {field.label} {field.required && <span className="text-red-500">*</span>}
                   </label>
                   <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
+                    id={field.name}
+                    type={field.type}
+                    name={field.name}
+                    value={formData[field.name]}
                     onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition-all duration-200 outline-none"
+                    required={field.required}
+                    className="w-full p-2.5 border border-[#C8D9E6] rounded-md
+                               focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D]
+                               transition-all duration-200 outline-none text-[#2F4156] bg-white disabled:bg-gray-100"
                     disabled={isSubmitting}
                   />
                 </div>
-              </div>
-              
-              <div className="flex justify-end gap-3 mt-8">
-                <button
-                  onClick={resetForm}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors duration-200 flex items-center"
-                  disabled={isSubmitting}
-                >
-                  <X size={16} className="mr-2" />
-                  Annuler
-                </button>
-                
-                <button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className={`px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md shadow-md hover:shadow-lg transition-all duration-200 flex items-center ${
-                    isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader size={16} className="mr-2 animate-spin" />
-                      <span>Traitement en cours...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check size={16} className="mr-2" />
-                      <span>{editingId ? 'Mettre à jour' : 'Enregistrer'}</span>
-                    </>
-                  )}
-                </button>
-              </div>
+              ))}
             </div>
-          </SlideDown>
-          
-          {/* Employee Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-indigo-100 p-4 rounded-lg shadow-sm">
-              <h3 className="text-sm font-medium text-indigo-800">Total des employés</h3>
-              <p className="text-2xl font-bold">{employees.length}</p>
+
+            <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-[#C8D9E6]">
+              <button
+                type="button" // Important for not submitting form
+                onClick={resetFormAndHide}
+                className="px-4 py-2 bg-[#C8D9E6]/50 hover:bg-[#C8D9E6]/80 text-[#2F4156] rounded-md
+                           transition-colors duration-200 flex items-center font-medium text-sm"
+                disabled={isSubmitting}
+              >
+                <X size={16} className="mr-2" />
+                Annuler
+              </button>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`px-5 py-2 bg-[#2F4156] hover:bg-[#3b5068] text-white rounded-md shadow-md
+                           hover:shadow-lg transition-all duration-200 flex items-center font-medium text-sm
+                           ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''}`}
+              >
+                {isSubmitting ? (<><Loader size={16} className="mr-2 animate-spin" />Traitement...</>)
+                : ( <><Check size={16} className="mr-2" />{editingId ? 'Mettre à jour' : 'Enregistrer'}</> )}
+              </button>
             </div>
-            <div className="bg-green-100 p-4 rounded-lg shadow-sm">
-              <h3 className="text-sm font-medium text-green-800">Salaire moyen</h3>
-              <p className="text-2xl font-bold">
-                {employees.length > 0 
-                  ? `${Math.round(employees.reduce((acc, emp) => acc + Number(emp.salaire), 0) / employees.length)} €`
-                  : '0 €'}
-              </p>
-            </div>
-            <div className="bg-blue-100 p-4 rounded-lg shadow-sm">
-              <h3 className="text-sm font-medium text-blue-800">Résultats de recherche</h3>
-              <p className="text-2xl font-bold">{sortedAndFilteredEmployees.length}</p>
-            </div>
-          </div>
-          
-          {/* Employees Table */}
-          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-            <div className="border-b bg-gray-50 px-4 py-3">
-              <h2 className="font-medium text-gray-700">Liste des employés</h2>
-            </div>
-            
-            {isLoading ? (
-              <div className="p-4">
-                <SkeletonLoader />
-              </div>
-            ) : error ? (
-              <div className="p-8 text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
-                  <HelpCircle size={24} />
-                </div>
-                <p className="text-lg font-medium text-gray-900">{error}</p>
-                <p className="text-gray-500 mt-2">Veuillez réessayer plus tard</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th 
-                        className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => handleSort('nom')}
-                      >
-                        <div className="flex items-center">
-                          Nom
-                          {sortField === 'nom' && (
-                            <ChevronDown 
-                              className={`ml-1 w-4 h-4 transition-transform duration-200 ${
-                                sortDirection === 'desc' ? 'transform rotate-180' : ''
-                              }`} 
-                            />
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => handleSort('prenom')}
-                      >
-                        <div className="flex items-center">
-                          Prénom
-                          {sortField === 'prenom' && (
-                            <ChevronDown 
-                              className={`ml-1 w-4 h-4 transition-transform duration-200 ${
-                                sortDirection === 'desc' ? 'transform rotate-180' : ''
-                              }`} 
-                            />
-                          )}
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                        Email
-                      </th>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-                        Téléphone
-                      </th>
-                      <th 
-                        className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors hidden md:table-cell"
-                        onClick={() => handleSort('poste')}
-                      >
-                        <div className="flex items-center">
-                          Poste
-                          {sortField === 'poste' && (
-                            <ChevronDown 
-                              className={`ml-1 w-4 h-4 transition-transform duration-200 ${
-                                sortDirection === 'desc' ? 'transform rotate-180' : ''
-                              }`} 
-                            />
-                          )}
-                        </div>
-                        
-                      </th>
-                      <th 
-                        className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors hidden md:table-cell"
-                        onClick={() => handleSort('date_entree')}
-                      >
-                        <div className="flex items-center">
-                         Date d'entrée
-                          {sortField === 'date_entree' && (
-                            <ChevronDown 
-                              className={`ml-1 w-4 h-4 transition-transform duration-200 ${
-                                sortDirection === 'desc' ? 'transform rotate-180' : ''
-                              }`} 
-                            />
-                          )}
-                        </div>
-                        
-                      </th>
-                      <th 
-                        className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors hidden lg:table-cell"
-                        onClick={() => handleSort('salaire')}
-                      >
-                        <div className="flex items-center">
-                          Salaire
-                          {sortField === 'salaire' && (
-                            <ChevronDown 
-                              className={`ml-1 w-4 h-4 transition-transform duration-200 ${
-                                sortDirection === 'desc' ? 'transform rotate-180' : ''
-                              }`} 
-                            />
-                          )}
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {sortedAndFilteredEmployees.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
-                          <div className="flex flex-col items-center justify-center">
-                            <Search className="h-8 w-8 text-gray-400 mb-2" />
-                            <p className="text-lg font-medium">Aucun employé trouvé</p>
-                            <p className="text-sm text-gray-500">Essayez avec un autre terme de recherche</p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      sortedAndFilteredEmployees.map((employee) => (
-                        <tr 
-                          key={employee.id} 
-                          className="hover:bg-blue-50 transition-colors duration-150"
-                        >
-                          <td className="py-3 px-4">{employee.nom}</td>
-                          <td className="py-3 px-4">{employee.prenom}</td>
-                          <td className="py-3 px-4 hidden md:table-cell truncate max-w-xs">{employee.email}</td>
-                          <td className="py-3 px-4 hidden lg:table-cell">{employee.telephone}</td>
-                          <td className="py-3 px-4 hidden md:table-cell">{employee.poste}</td>
-                          <td className="py-3 px-4 hidden md:table-cell">{employee.date_entree}</td>
-                          <td className="py-3 px-4 hidden lg:table-cell">
-                            <span className="font-medium">{Number(employee.salaire).toLocaleString()}€</span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex justify-center gap-2">
-                              <button
-                                onClick={() => handleEdit(employee)}
-                                className="p-1.5 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200 transition-colors duration-200"
-                                title="Modifier"
-                              >
-                                <Edit size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(employee.id)}
-                                className="p-1.5 bg-red-100 text-red-600 rounded-md hover:bg-red-200 transition-colors duration-200"
-                                title="Supprimer"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          </form>
+        </div>
+      </SlideDown>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+        {/* ... Stats Cards (Same Theming) ... */}
+        <div className="bg-white border border-[#C8D9E6] p-5 rounded-xl shadow-sm">
+          <h3 className="text-sm font-medium text-[#567C8D]">Total des employés</h3>
+          <p className="text-3xl font-bold text-[#2F4156] mt-1">{employees.length}</p>
+        </div>
+        <div className="bg-white border border-[#C8D9E6] p-5 rounded-xl shadow-sm">
+          <h3 className="text-sm font-medium text-[#567C8D]">Salaire moyen</h3>
+          <p className="text-3xl font-bold text-[#2F4156] mt-1">
+            {employees.length > 0
+              ? `${Math.round(employees.reduce((acc, emp) => acc + Number(emp.salaire || 0), 0) / employees.length).toLocaleString()} €`
+              : '0 €'}
+          </p>
+        </div>
+        <div className="bg-white border border-[#C8D9E6] p-5 rounded-xl shadow-sm">
+          <h3 className="text-sm font-medium text-[#567C8D]">Résultats</h3>
+          <p className="text-3xl font-bold text-[#2F4156] mt-1">{sortedAndFilteredEmployees.length}</p>
         </div>
       </div>
-    </div>
+
+      <div className="bg-white border border-[#C8D9E6] rounded-xl shadow-lg overflow-hidden">
+        <div className="border-b border-[#C8D9E6] bg-[#F5EFEB]/80 px-5 py-3.5">
+          <h2 className="font-semibold text-[#2F4156]">Liste des employés</h2>
+        </div>
+
+        {isLoading ? ( <div className="p-4"><SkeletonLoader /></div> )
+        : error ? (
+          <div className="p-12 text-center flex flex-col items-center">
+            <HelpCircle size={40} className="text-red-500 mb-4" />
+            <p className="text-xl font-medium text-[#2F4156]">{error}</p>
+            <p className="text-[#567C8D] mt-2">Veuillez vérifier votre connexion ou réessayer plus tard.</p>
+            <button 
+                onClick={fetchEmployees} 
+                className="mt-6 px-4 py-2 bg-[#567C8D] text-white rounded-lg hover:bg-[#4A6582] transition-colors text-sm font-medium"
+            >
+                Réessayer
+            </button>
+          </div>
+        )
+        : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-[#C8D9E6]/30">
+                  {/* Table Headers */}
+                  {['nom', 'prénom', 'email', 'téléphone', 'poste', 'date_entree', 'salaire'].map(fieldKey => {
+                    const displayHeader = {
+                        nom: 'Nom', prenom: 'Prénom', email: 'Email', telephone: 'Téléphone',
+                        poste: 'Poste', date_entree: "Date d'entrée", salaire: 'Salaire'
+                    }[fieldKey];
+                    const isHiddenSm = ['email', 'téléphone', 'salaire', 'date_entree'].includes(fieldKey);
+                    const isHiddenLg = ['téléphone', 'salaire'].includes(fieldKey);
+
+                    return (
+                        <th
+                        key={fieldKey}
+                        className={`py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase 
+                                    tracking-wider cursor-pointer hover:bg-[#C8D9E6]/60 transition-colors
+                                    ${isHiddenLg ? 'hidden lg:table-cell' : (isHiddenSm ? 'hidden md:table-cell' : '')}
+                                    `}
+                        onClick={() => handleSort(fieldKey)}
+                        >
+                        <div className="flex items-center">
+                            {displayHeader}
+                            {sortField === fieldKey && (
+                            <ChevronDown className={`ml-1.5 w-3.5 h-3.5 transition-transform duration-200 text-[#567C8D] ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} />
+                            )}
+                        </div>
+                        </th>
+                    );
+                  })}
+                  <th className="py-3 px-4 text-center text-xs font-semibold text-[#2F4156] uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#C8D9E6]/70">
+                {sortedAndFilteredEmployees.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="px-4 py-12 text-center text-gray-500"> {/* Adjusted colSpan */}
+                      <div className="flex flex-col items-center justify-center">
+                        <Search className="h-12 w-12 text-[#C8D9E6] mb-3" />
+                        <p className="text-lg font-medium text-[#2F4156]">Aucun employé trouvé</p>
+                        <p className="text-sm text-[#567C8D]">Vérifiez vos filtres ou ajoutez de nouveaux employés.</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  sortedAndFilteredEmployees.map((employee) => (
+                    <tr key={employee.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150 text-sm">
+                      <td className="py-3 px-4 text-[#2F4156] font-medium">{employee.nom}</td>
+                      <td className="py-3 px-4 text-[#2F4156]">{employee.prenom}</td>
+                      <td className="py-3 px-4 text-[#567C8D] hidden md:table-cell truncate max-w-xs">{employee.email}</td>
+                      <td className="py-3 px-4 text-[#567C8D] hidden lg:table-cell">{employee.telephone}</td>
+                      <td className="py-3 px-4 text-[#2F4156] hidden md:table-cell">{employee.poste}</td>
+                      <td className="py-3 px-4 text-[#567C8D] hidden md:table-cell">{employee.date_entree}</td>
+                      <td className="py-3 px-4 text-[#2F4156] hidden lg:table-cell font-medium">
+                        {Number(employee.salaire || 0).toLocaleString()}€
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex justify-center items-center gap-2">
+                          <button
+                            onClick={() => handleEdit(employee)}
+                            className="p-1.5 text-[#567C8D] rounded-md hover:bg-[#567C8D]/20 hover:text-[#2F4156] transition-colors"
+                            title="Modifier"
+                          > <Edit size={16} /> </button>
+                          <button
+                            onClick={() => handleDelete(employee.id)}
+                            className="p-1.5 text-red-600 rounded-md hover:bg-red-500/20 hover:text-red-700 transition-colors"
+                            title="Supprimer"
+                          > <Trash2 size={16} /> </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

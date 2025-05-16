@@ -1,57 +1,62 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, MessageSquare, Loader, AlertTriangle, ListFilter, Eye } from 'lucide-react';
+import {
+  FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaSpinner, FaFilter, FaEye,
+  FaCheck, FaTimes
+} from 'react-icons/fa';
 
-// Re-usable animated components (assuming they are in separate files or defined above)
+// Re-usable animated components themed like Employee.jsx
+
 const Notification = ({ show, message, type, onDismiss }) => {
-  if (!show) return null;
   return (
-    <div 
-      className={`fixed top-5 right-5 z-[100] p-4 rounded-lg shadow-xl text-sm font-medium
-                  transform transition-all duration-300 ease-in-out
-                  ${show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
-                  ${type === 'success' ? 'bg-green-500 text-white' : ''}
-                  ${type === 'error' ? 'bg-red-500 text-white' : ''}
-                  ${type === 'warning' ? 'bg-yellow-500 text-gray-800' : ''}
+    <div
+      className={`fixed top-5 right-5 z-[100] p-4 rounded-lg shadow-xl transform transition-all duration-500 ease-in-out
+                  ${show ? 'translate-y-0 opacity-100' : '-translate-y-16 opacity-0 pointer-events-none'}
+                  ${type === 'success' ? 'bg-green-500 text-white border-l-4 border-green-700' : ''}
+                  ${type === 'error' ? 'bg-red-500 text-white border-l-4 border-red-700' : ''}
+                  ${type === 'warning' ? 'bg-yellow-400 text-yellow-800 border-l-4 border-yellow-600' : ''}
                   flex items-center justify-between`}
     >
       <div className="flex items-center">
-        {type === 'success' && <CheckCircle size={20} className="mr-2" />}
-        {type === 'error' && <AlertTriangle size={20} className="mr-2" />}
-        {type === 'warning' && <MessageSquare size={20} className="mr-2" />}
-        {message}
+        {type === 'success' && <FaCheckCircle size={20} className="mr-3 flex-shrink-0" />}
+        {type === 'error' && <FaTimesCircle size={20} className="mr-3 flex-shrink-0" />}
+        {type === 'warning' && <FaExclamationTriangle size={20} className="mr-3 flex-shrink-0" />}
+        <span className="text-sm font-medium">{message}</span>
       </div>
       <button onClick={onDismiss} className="ml-4 text-current hover:opacity-75">
-        <XCircle size={18} />
+        <FaTimes size={18} />
       </button>
     </div>
   );
 };
 
-const SkeletonLoader = ({ rows = 5, cols = 5 }) => (
-  <div className="animate-pulse">
+const SkeletonLoader = ({ rows = 5 }) => (
+  <div className="animate-pulse p-4">
     {[...Array(rows)].map((_, i) => (
-      <div key={i} className={`grid grid-cols-${cols + 1} gap-4 py-4 border-b border-gray-200 items-center`}>
-        {[...Array(cols)].map((_, j) => (
-          <div key={j} className="h-5 bg-gray-200 rounded col-span-1"></div>
-        ))}
-        <div className="h-8 bg-gray-200 rounded w-full col-span-1 flex gap-2">
-            <div className="h-8 bg-gray-300 rounded w-1/2"></div>
-            <div className="h-8 bg-gray-300 rounded w-1/2"></div>
+      <div key={i} className={`grid grid-cols-5 md:grid-cols-6 gap-4 py-3.5 border-b border-[#C8D9E6]/40 items-center`}>
+        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>
+        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>
+        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>
+        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1 hidden md:block"></div>
+        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>
+        <div className="h-8 bg-[#C8D9E6]/70 rounded w-full col-span-1 flex gap-2 p-1">
+            <div className="h-full bg-[#A0B9CD]/80 rounded w-1/2"></div>
+            <div className="h-full bg-[#A0B9CD]/80 rounded w-1/2"></div>
         </div>
       </div>
     ))}
   </div>
 );
 
+
 const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 transform transition-all">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <XCircle size={24} />
+      <div className="bg-white border border-[#C8D9E6] rounded-xl shadow-lg w-full max-w-md p-6 transform transition-all">
+        <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#C8D9E6]">
+          <h3 className="text-xl font-semibold text-[#2F4156]">{title}</h3>
+          <button onClick={onClose} className="text-[#567C8D] hover:text-[#2F4156]">
+            <FaTimesCircle size={24} />
           </button>
         </div>
         {children}
@@ -60,13 +65,13 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   );
 };
 
-const API_URL = 'http://localhost:8000/api/admin'; // Admin specific API base URL
+const API_URL = 'http://localhost:8000/api/admin';
 
 export default function Conges() {
   const [conges, setConges] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'en_attente', 'approuve', 'rejete'
+  const [filterStatus, setFilterStatus] = useState('all');
   
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [currentCongeForAction, setCurrentCongeForAction] = useState(null);
@@ -80,14 +85,13 @@ export default function Conges() {
   });
 
   const getAdminToken = () => {
-    // IMPORTANT: Replace 'admin_token' with the actual key you use for storing the admin's auth token
     return localStorage.getItem('admin_token'); 
   };
 
   const showAppNotification = (message, type = 'success', duration = 3000) => {
     setNotification({ show: true, message, type });
     setTimeout(() => {
-      setNotification({ show: false, message: '', type: 'success' });
+      setNotification(prev => ({ ...prev, show: false }));
     }, duration);
   };
 
@@ -99,7 +103,7 @@ export default function Conges() {
       if (!token) {
         throw new Error('Administrateur non authentifié.');
       }
-      const response = await fetch(`${API_URL}/conges`, { // Uses '/admin/conges'
+      const response = await fetch(`${API_URL}/conges`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -109,20 +113,19 @@ export default function Conges() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Erreur non spécifiée du serveur' }));
         throw new Error(errorData.message || 'Erreur lors de la récupération des demandes.');
       }
       
       const data = await response.json();
-      // Assuming data is an array of conges. If it's nested (e.g. data.conges), adjust here.
-      setConges(Array.isArray(data) ? data : []); 
+      setConges(Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []));
     } catch (err) {
       setError(err.message);
       showAppNotification(err.message, 'error');
     } finally {
       setIsLoading(false);
     }
-  }, []); // showAppNotification can be a dependency if not stable
+  }, []);
 
   useEffect(() => {
     fetchAdminConges();
@@ -134,6 +137,7 @@ export default function Conges() {
     if (!token) {
       showAppNotification('Administrateur non authentifié.', 'error');
       setIsSubmittingAction(false);
+      setCurrentCongeForAction(null);
       return;
     }
 
@@ -143,11 +147,12 @@ export default function Conges() {
     } else if (newStatus === 'rejete' && !explication) {
       showAppNotification('Une explication est requise pour un refus.', 'warning');
       setIsSubmittingAction(false);
-      return; // API will also catch this but good for UX
+      setCurrentCongeForAction(null);
+      return;
     }
 
     try {
-      const response = await fetch(`${API_URL}/conges/${congeId}`, { // Uses '/admin/conges/{id}'
+      const response = await fetch(`${API_URL}/conges/${congeId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -164,22 +169,21 @@ export default function Conges() {
       }
 
       showAppNotification(responseData.message || 'Statut mis à jour avec succès.', 'success');
-      fetchAdminConges(); // Refresh the list
+      fetchAdminConges();
       if (newStatus === 'rejete') {
         setShowRejectionModal(false);
         setRejectionReason('');
       }
-      setCurrentCongeForAction(null);
-
     } catch (err) {
       showAppNotification(err.message, 'error');
     } finally {
       setIsSubmittingAction(false);
+      setCurrentCongeForAction(null);
     }
   };
 
   const openRejectionModal = (conge) => {
-    setCurrentCongeForAction(conge);
+    setCurrentCongeForAction({...conge, action: 'rejete'});
     setShowRejectionModal(true);
   };
 
@@ -196,13 +200,13 @@ export default function Conges() {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'en_attente':
-        return <span className="px-2.5 py-1 text-xs font-semibold text-yellow-800 bg-yellow-200 rounded-full">En attente</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold text-yellow-700 bg-yellow-100 border border-yellow-300 rounded-full">En attente</span>;
       case 'approuve':
-        return <span className="px-2.5 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Approuvé</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold text-green-700 bg-green-100 border border-green-300 rounded-full">Approuvé</span>;
       case 'rejete':
-        return <span className="px-2.5 py-1 text-xs font-semibold text-red-800 bg-red-200 rounded-full">Rejeté</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold text-red-700 bg-red-100 border border-red-300 rounded-full">Rejeté</span>;
       default:
-        return <span className="px-2.5 py-1 text-xs font-semibold text-gray-800 bg-gray-200 rounded-full">{status}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold text-gray-700 bg-gray-100 border border-gray-300 rounded-full">{status}</span>;
     }
   };
 
@@ -216,40 +220,38 @@ export default function Conges() {
   const filteredConges = conges.filter(conge => {
     if (filterStatus === 'all') return true;
     return conge.statut === filterStatus;
-  }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)); // Sort by creation date, newest first
+  }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
-
-  // Display employee identifier. Prefers `conge.employe.name` if available from eager loading, falls back to `employe_id`
   const getEmployeeDisplay = (conge) => {
-    if (conge.employe && conge.employe.nom) { // Assuming 'nom' field on employe object
+    if (conge.employe && conge.employe.nom) {
         return `${conge.employe.nom} ${conge.employe.prenom || ''}`;
     }
     return `Employé ID: ${conge.employe_id}`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-gray-200 p-4 md:p-6">
-      <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden">
-        <header className="bg-slate-700 text-white px-6 py-5">
+    <>
+      <Notification 
+        show={notification.show} 
+        message={notification.message} 
+        type={notification.type}
+        onDismiss={() => setNotification(prev => ({ ...prev, show: false }))} 
+      />
+
+      <div className="max-w-6xl mx-auto my-4 md:my-6 bg-white rounded-xl shadow-lg overflow-hidden">
+        <header className="bg-[#F5EFEB]/80 text-[#2F4156] px-6 py-4 border-b border-[#C8D9E6]">
           <h1 className="text-2xl font-bold tracking-tight">Validation des Demandes de Congé</h1>
         </header>
         
-        <Notification 
-          show={notification.show} 
-          message={notification.message} 
-          type={notification.type}
-          onDismiss={() => setNotification(prev => ({ ...prev, show: false }))} 
-        />
-        
         <div className="p-6">
           <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <h2 className="text-xl font-semibold text-slate-800">Liste des Demandes</h2>
-            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
-              <ListFilter size={20} className="text-slate-500" />
+            <h2 className="text-xl font-semibold text-[#2F4156]">Liste des Demandes</h2>
+            <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-[#C8D9E6] shadow-sm">
+              <FaFilter size={18} className="text-[#567C8D]" />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="bg-transparent text-slate-700 font-medium focus:outline-none p-1.5 rounded-md"
+                className="bg-transparent text-[#2F4156] font-medium focus:outline-none p-1.5 rounded-md border-transparent focus:border-[#567C8D] focus:ring-0"
               >
                 <option value="all">Tous les statuts</option>
                 <option value="en_attente">En attente</option>
@@ -259,72 +261,81 @@ export default function Conges() {
             </div>
           </div>
           
-          <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden">
+          <div className="bg-white border border-[#C8D9E6] rounded-lg shadow-md overflow-hidden">
             {isLoading ? (
-              <div className="p-6"> <SkeletonLoader rows={5} cols={4} /> </div>
+              <div className="p-1"><SkeletonLoader rows={5} /></div>
             ) : error && !filteredConges.length ? (
-              <div className="p-10 text-center">
-                <AlertTriangle size={48} className="mx-auto text-red-400 mb-4" />
-                <p className="text-xl font-medium text-gray-700">{error}</p>
-                <p className="text-gray-500 mt-2">Impossible de charger les demandes. Veuillez réessayer.</p>
+              <div className="p-10 text-center flex flex-col items-center">
+                <FaExclamationTriangle size={40} className="mx-auto text-red-500 mb-4" />
+                <p className="text-xl font-medium text-[#2F4156]">{error}</p>
+                <p className="text-[#567C8D] mt-2">Impossible de charger les demandes. Veuillez réessayer.</p>
+                <button
+                    onClick={fetchAdminConges}
+                    className="mt-6 px-4 py-2 bg-[#567C8D] text-white rounded-lg hover:bg-[#4A6582] transition-colors text-sm font-medium"
+                >
+                    Réessayer
+                </button>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-slate-50">
+                <table className="min-w-full">
+                  <thead className="bg-[#C8D9E6]/30">
                     <tr>
-                      <th scope="col" className="py-3.5 px-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Employé</th>
-                      <th scope="col" className="py-3.5 px-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Début</th>
-                      <th scope="col" className="py-3.5 px-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fin</th>
-                      <th scope="col" className="py-3.5 px-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider hidden md:table-cell">Motif</th>
-                      <th scope="col" className="py-3.5 px-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Statut</th>
-                      <th scope="col" className="py-3.5 px-4 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Actions</th>
+                      <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Employé</th>
+                      <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Début</th>
+                      <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Fin</th>
+                      <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider hidden md:table-cell">Motif</th>
+                      <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Statut</th>
+                      <th scope="col" className="py-3 px-4 text-center text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-[#C8D9E6]/70">
                     {filteredConges.length === 0 && !isLoading ? (
                       <tr>
-                        <td colSpan="6" className="px-4 py-10 text-center text-gray-500">
-                          <Eye size={32} className="mx-auto text-slate-400 mb-3" />
-                          <p className="text-lg font-medium">Aucune demande correspondant à ce filtre.</p>
+                        <td colSpan="6" className="px-4 py-12 text-center">
+                          <div className="flex flex-col items-center justify-center">
+                            <FaEye size={36} className="mx-auto text-[#C8D9E6] mb-3" />
+                            <p className="text-lg font-medium text-[#2F4156]">Aucune demande</p>
+                            <p className="text-sm text-[#567C8D]">Aucune demande ne correspond à ce filtre.</p>
+                          </div>
                         </td>
                       </tr>
                     ) : (
                       filteredConges.map((conge) => (
-                        <tr key={conge.id} className="hover:bg-slate-50 transition-colors duration-150">
-                          <td className="py-4 px-4 whitespace-nowrap text-sm font-medium text-slate-800">{getEmployeeDisplay(conge)}</td>
-                          <td className="py-4 px-4 whitespace-nowrap text-sm text-gray-600">{formatDate(conge.date_debut)}</td>
-                          <td className="py-4 px-4 whitespace-nowrap text-sm text-gray-600">{formatDate(conge.date_fin)}</td>
-                          <td className="py-4 px-4 text-sm text-gray-600 hidden md:table-cell truncate max-w-xs" title={conge.motif || ''}>{conge.motif || <span className="italic text-gray-400">Aucun</span>}</td>
-                          <td className="py-4 px-4 whitespace-nowrap text-sm">{getStatusBadge(conge.statut)}</td>
-                          <td className="py-4 px-4 whitespace-nowrap text-sm text-center">
+                        <tr key={conge.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150">
+                          <td className="py-3 px-4 whitespace-nowrap text-sm font-medium text-[#2F4156]">{getEmployeeDisplay(conge)}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(conge.date_debut)}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(conge.date_fin)}</td>
+                          <td className="py-3 px-4 text-sm text-[#567C8D] hidden md:table-cell truncate max-w-xs" title={conge.motif || ''}>{conge.motif || <span className="italic text-gray-400">Aucun</span>}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm">{getStatusBadge(conge.statut)}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-center">
                             {conge.statut === 'en_attente' ? (
                               <div className="flex justify-center items-center gap-2">
                                 <button
-                                  onClick={() => handleStatusUpdate(conge.id, 'approuve')}
+                                  onClick={() => { setCurrentCongeForAction({...conge, action: 'approuve'}); handleStatusUpdate(conge.id, 'approuve'); }}
                                   disabled={isSubmittingAction && currentCongeForAction?.id === conge.id}
-                                  className="flex items-center justify-center px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold rounded-md shadow-sm transition-all duration-150 disabled:opacity-60"
+                                  className="flex items-center justify-center px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold rounded-md shadow-sm transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                                   title="Approuver"
                                 >
-                                  {isSubmittingAction && currentCongeForAction?.id === conge.id && currentCongeForAction?.action === 'approuve' ? <Loader size={14} className="animate-spin mr-1" /> : <CheckCircle size={14} className="mr-1" />}
+                                  {isSubmittingAction && currentCongeForAction?.id === conge.id && currentCongeForAction?.action === 'approuve' ? <FaSpinner size={14} className="animate-spin mr-1" /> : <FaCheck size={14} className="mr-1" />}
                                   Approuver
                                 </button>
                                 <button
-                                  onClick={() => { openRejectionModal(conge); setCurrentCongeForAction({...conge, action: 'rejete'}); }}
+                                  onClick={() => openRejectionModal(conge)}
                                   disabled={isSubmittingAction && currentCongeForAction?.id === conge.id}
-                                  className="flex items-center justify-center px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-md shadow-sm transition-all duration-150 disabled:opacity-60"
+                                  className="flex items-center justify-center px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-md shadow-sm transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                                   title="Rejeter"
                                 >
-                                 {isSubmittingAction && currentCongeForAction?.id === conge.id && currentCongeForAction?.action === 'rejete' ? <Loader size={14} className="animate-spin mr-1" /> : <XCircle size={14} className="mr-1" />}
+                                 {isSubmittingAction && currentCongeForAction?.id === conge.id && currentCongeForAction?.action === 'rejete' ? <FaSpinner size={14} className="animate-spin mr-1" /> : <FaTimes size={14} className="mr-1" />}
                                   Rejeter
                                 </button>
                               </div>
                             ) : conge.statut === 'rejete' && conge.explication ? (
-                                <p className="text-xs text-gray-500 italic px-2" title={conge.explication}>
-                                    Motif refus: {conge.explication.substring(0,30)}{conge.explication.length > 30 && '...'}
+                                <p className="text-xs text-[#567C8D] italic px-2" title={conge.explication}>
+                                    Refus: {conge.explication.substring(0,25)}{conge.explication.length > 25 && '...'}
                                 </p>
                             ) : (
-                                <span className="text-xs text-gray-400 italic">Traité</span>
+                                <span className="text-xs text-[#A0AEC0] italic">Traité</span>
                             )}
                           </td>
                         </tr>
@@ -336,7 +347,7 @@ export default function Conges() {
             )}
           </div>
         </div>
-        <footer className="text-center py-4 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
+        <footer className="text-center py-3 border-t border-[#C8D9E6] bg-[#F5EFEB]/80 text-xs text-[#567C8D]">
             Interface Administrateur © {new Date().getFullYear()}
         </footer>
       </div>
@@ -347,36 +358,45 @@ export default function Conges() {
         title="Motif du Rejet"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Veuillez fournir une explication pour le rejet de la demande de congé pour <span className="font-semibold">{currentCongeForAction ? getEmployeeDisplay(currentCongeForAction) : ''}</span>.
+          <p className="text-sm text-[#567C8D]">
+            Veuillez fournir une explication pour le rejet de la demande de congé pour <span className="font-semibold text-[#2F4156]">{currentCongeForAction ? getEmployeeDisplay(currentCongeForAction) : ''}</span>.
           </p>
           <textarea
             value={rejectionReason}
             onChange={(e) => setRejectionReason(e.target.value)}
             rows="4"
-            className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-red-400 focus:border-red-500 transition-colors outline-none"
+            className="w-full p-2.5 border border-[#C8D9E6] rounded-md shadow-sm 
+                       focus:ring-1 focus:ring-red-500 focus:border-red-500 
+                       transition-colors outline-none text-[#2F4156] bg-white
+                       disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
             placeholder="Ex: Période de forte activité, manque de personnel..."
             disabled={isSubmittingAction}
           ></textarea>
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[#C8D9E6]">
             <button
+              type="button"
               onClick={() => { setShowRejectionModal(false); setRejectionReason(''); setCurrentCongeForAction(null); }}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors duration-200 font-medium"
+              className="px-4 py-2 bg-[#E2E8F0] hover:bg-[#CBD5E1] text-[#2F4156] rounded-md 
+                         transition-colors duration-200 flex items-center font-medium text-sm
+                         disabled:opacity-70 disabled:cursor-not-allowed"
               disabled={isSubmittingAction}
             >
+              <FaTimes size={16} className="mr-2" />
               Annuler
             </button>
             <button
               onClick={handleSubmitRejection}
               disabled={isSubmittingAction || !rejectionReason.trim()}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md shadow-md transition-all duration-200 flex items-center font-semibold disabled:opacity-60"
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md shadow-md 
+                         transition-all duration-200 flex items-center font-semibold text-sm
+                         disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {isSubmittingAction ? <Loader size={18} className="animate-spin mr-2" /> : <CheckCircle size={18} className="mr-2" />}
+              {isSubmittingAction ? <FaSpinner size={18} className="animate-spin mr-2" /> : <FaCheckCircle size={18} className="mr-2" />}
               Confirmer le Rejet
             </button>
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

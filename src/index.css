@@ -1,3 +1,55 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* In your global CSS file (e.g., index.css or App.css) */
+
+/* --- Keep your existing .hide-scrollbar styles --- */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+/* --- End of .hide-scrollbar styles --- */
+
+
+.scrollable-nav-container {
+  position: relative; /* Crucial for positioning pseudo-elements */
+}
+
+.scrollable-nav-container::before,
+.scrollable-nav-container::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 30px; /* Adjust height of the fade effect (e.g., 25px to 40px) */
+  z-index: 10;  /* Ensure it's above the nav items */
+  pointer-events: none; /* IMPORTANT: Allows clicks to pass through to items below */
+  opacity: 0;
+  transition: opacity 0.25s ease-in-out;
+}
+
+/* Top fade */
+.scrollable-nav-container::before {
+  top: 0;
+  /* Gradient from sidebar background to transparent */
+  background: linear-gradient(to bottom, #2F4156 40%, rgba(47, 65, 86, 0) 100%);
+}
+
+/* Bottom fade */
+.scrollable-nav-container::after {
+  bottom: 0;
+  /* Gradient from transparent to sidebar background */
+  background: linear-gradient(to top, #2F4156 40%, rgba(47, 65, 86, 0) 100%);
+}
+
+/* Classes to toggle visibility of fades based on scroll state */
+.scrollable-nav-container.can-scroll-up::before {
+  opacity: 1;
+}
+
+.scrollable-nav-container.can-scroll-down::after {
+  opacity: 1;
+}
