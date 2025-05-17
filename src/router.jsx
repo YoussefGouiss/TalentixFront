@@ -28,10 +28,11 @@ import EmployeDemandeAttestation from './Employe/pages/attestation/EmployeDemand
 import Conge from './Employe/pages/conges/Conge';
 import AbsenceAdmin from './Admin/pages/Abscence/AbsenceAdmin';
 import AbsenceEmploye from './Employe/pages/absences/AbsenceEmploye';
+import WelcomPageTest from './WelcomPage';
  const route = createBrowserRouter([
         {
             path :'/',
-            element : <WelcomPage/>
+            element : <WelcomPageTest/>
         },
         {
             path :'/admin/login',

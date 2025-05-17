@@ -1,16 +1,52 @@
-import { useState, useEffect } from "react";
-import { Trash2, Edit, Plus, Check, X, RefreshCw, Loader2, Save } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { 
+    FaPlus, FaEdit, FaTrashAlt, FaTimesCircle, FaCheckCircle, 
+    FaExclamationTriangle, FaSpinner, FaSync, FaSave, FaBoxOpen 
+} from 'react-icons/fa';
+// import { Loader2 } from 'lucide-react'; // Replaced with FaSpinner
 
-// Main component
+// --- Themed Notification Component (defined above or imported) ---
+const Notification = ({ show, message, type, onDismiss }) => {
+  if (!show && !message) return null; 
+  const visibilityClasses = show ? 'translate-y-0 opacity-100' : '-translate-y-16 opacity-0 pointer-events-none';
+  return (
+    <div
+      className={`fixed top-5 right-5 z-[1000] p-4 rounded-lg shadow-xl transform transition-all duration-500 ease-in-out
+                  ${visibilityClasses}
+                  ${type === 'success' ? 'bg-green-500 text-white border-l-4 border-green-700' : ''}
+                  ${type === 'error' ? 'bg-red-500 text-white border-l-4 border-red-700' : ''}
+                  ${type === 'warning' ? 'bg-yellow-400 text-yellow-800 border-l-4 border-yellow-600' : ''}
+                  flex items-center justify-between min-w-[300px]`}
+    >
+      <div className="flex items-center">
+        {type === 'success' && <FaCheckCircle size={20} className="mr-3 flex-shrink-0" />}
+        {type === 'error' && <FaTimesCircle size={20} className="mr-3 flex-shrink-0" />}
+        {type === 'warning' && <FaExclamationTriangle size={20} className="mr-3 flex-shrink-0" />}
+        <span className="text-sm font-medium">{message}</span>
+      </div>
+      <button onClick={onDismiss} className="ml-4 text-current hover:opacity-75">
+        <FaTimesCircle size={18} />
+      </button>
+    </div>
+  );
+};
+
+// --- SlideDown Component (Simple version for consistency) ---
+const SlideDown = ({ isVisible, children }) => (
+    <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isVisible ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+      {isVisible && <div className="pt-2 pb-6">{children}</div>}
+    </div>
+  );
+
+
 export default function MaterialEmploye() {
   const [materials, setMaterials] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(null);
-  const [actionSuccess, setActionSuccess] = useState(null);
+  const [loading, setLoading] = useState(true); // For table data
+  const [formLoading, setFormLoading] = useState(false); // For form submission
+  const [deleteLoadingId, setDeleteLoadingId] = useState(null); // For specific delete button
+
+  const [notification, setNotificationState] = useState({ show: false, message: '', type: '' });
   
-  // Form states
   const [showForm, setShowForm] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -20,131 +56,105 @@ export default function MaterialEmploye() {
     quantite: 1
   });
 
-  // Fetch materials on component mount
-  useEffect(() => {
-    fetchMaterials();
-  }, []);
+  const showAppNotification = (message, type = 'success', duration = 3000) => {
+    setNotificationState({ show: true, message, type });
+    setTimeout(() => {
+      setNotificationState(prev => ({ ...prev, show: false }));
+    }, duration);
+  };
 
-  // Success message timer
-  useEffect(() => {
-    if (actionSuccess) {
-      const timer = setTimeout(() => {
-        setActionSuccess(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [actionSuccess]);
-
-  // Fetch materials from API
   const fetchMaterials = async () => {
     setLoading(true);
     try {
       const response = await fetch('http://localhost:8000/api/material',{
-        method : 'GET',
         headers :{
           'Authorization': `Bearer ${localStorage.getItem('employe_token')}`,
-          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         }
       });
-
-      if (!response.ok) throw new Error('Failed to fetch materials');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'Erreur de récupération des matériaux.');
+      }
       const data = await response.json();
-      setMaterials(data);
-      setError(null);
+      setMaterials(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message);
+      showAppNotification(err.message, 'error');
     } finally {
       setLoading(false);
     }
   };
+  
+  useEffect(() => {
+    fetchMaterials();
+  }, []);
 
-  // Handle form input changes
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'quantite' ? parseInt(value) || 0 : value
+      [name]: name === 'quantite' ? Math.max(1, parseInt(value) || 1) : value // Ensure quantite is at least 1
     }));
   };
 
-  // Handle form submission (create or update)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.nom.trim() || !formData.motif.trim()) {
+        showAppNotification("Le nom du matériel et le motif sont requis.", "warning");
+        return;
+    }
     setFormLoading(true);
+    const url = editMode ? `http://localhost:8000/api/material/${currentId}` : 'http://localhost:8000/api/material';
+    const method = editMode ? 'PUT' : 'POST';
     
     try {
-      if (editMode) {
-        // Update existing material
-        const response = await fetch(`http://localhost:8000/api/material/${currentId}`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('employe_token')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        });
-
-        if (!response.ok) throw new Error('Failed to update material');
-        
-        // Update local state
-        setMaterials(materials.map(material => 
-          material.id === currentId ? { ...material, ...formData } : material
-        ));
-        setActionSuccess("Matériel mis à jour avec succès!");
-      } else {
-        // Create new material
-        const response = await fetch('http://localhost:8000/api/material', {
-          method: 'POST',
-          headers: {
+      const response = await fetch(url, {
+        method: method,
+        headers: {
           'Authorization': `Bearer ${localStorage.getItem('employe_token')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        });
-
-        if (!response.ok) throw new Error('Failed to create material');
-        
-        const newMaterial = await response.json();
-        setMaterials([...materials, newMaterial]);
-        setActionSuccess("Nouvelle demande créée avec succès!");
-      }
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      const responseData = await response.json();
+      if (!response.ok) throw new Error(responseData.message || `Échec de ${editMode ? 'mise à jour' : 'création'}.`);
       
-      // Reset form
+      showAppNotification(responseData.message || `Demande ${editMode ? 'mise à jour' : 'créée'} avec succès!`, 'success');
+      fetchMaterials(); // Refresh the list
       resetForm();
     } catch (err) {
-      setError(err.message);
+      showAppNotification(err.message, 'error');
     } finally {
       setFormLoading(false);
     }
   };
 
-  // Delete a material
   const handleDelete = async (id) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette demande de matériel?')) return;
-    
-    setDeleteLoading(id);
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette demande de matériel?')) return;
+    setDeleteLoadingId(id);
     try {
       const response = await fetch(`http://localhost:8000/api/material/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('employe_token')}`,
-            }
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('employe_token')}`, 'Accept': 'application/json' }
       });
-
-      if (!response.ok) throw new Error('Failed to delete material');
+      // DELETE might return 204 No Content or JSON
+      let responseData = {};
+      if (response.status !== 204) {
+          responseData = await response.json();
+      }
+      if (!response.ok && response.status !== 204) throw new Error(responseData.message || 'Échec de la suppression.');
       
-      // Remove from local state
-      setMaterials(materials.filter(material => material.id !== id));
-      setError(null);
-      setActionSuccess("Demande supprimée avec succès!");
+      showAppNotification(responseData.message || "Demande supprimée avec succès!", 'success');
+      setMaterials(prevMaterials => prevMaterials.filter(material => material.id !== id));
     } catch (err) {
-      setError(err.message);
+      showAppNotification(err.message, 'error');
     } finally {
-      setDeleteLoading(null);
+      setDeleteLoadingId(null);
     }
   };
 
-  // Edit a material - populate form with existing data
   const handleEdit = (material) => {
     setFormData({
       nom: material.nom,
@@ -154,290 +164,175 @@ export default function MaterialEmploye() {
     setCurrentId(material.id);
     setEditMode(true);
     setShowForm(true);
-    // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Reset form state
   const resetForm = () => {
-    setFormData({
-      nom: "",
-      motif: "",
-      quantite: 1
-    });
+    setFormData({ nom: "", motif: "", quantite: 1 });
     setCurrentId(null);
     setEditMode(false);
     setShowForm(false);
   };
 
-  // Status badge with appropriate colors
+  const toggleForm = () => {
+    if (showForm) {
+        resetForm();
+    } else {
+        setShowForm(true);
+    }
+  };
+  
+  // Admin-themed status badge
   const StatusBadge = ({ status }) => {
-    const statusMap = {
-      en_attente: { label: "En attente", color: "bg-yellow-100 text-yellow-800 border border-yellow-200" },
-      approuve: { label: "Approuvé", color: "bg-green-100 text-green-800 border border-green-200" },
-      rejete: { label: "Rejeté", color: "bg-red-100 text-red-800 border border-red-200" },
-      default: { label: status, color: "bg-gray-100 text-gray-800 border border-gray-200" }
-    };
-    
-    const { label, color } = statusMap[status] || statusMap.default;
-    
+    let style = { label: status, colorClasses: 'bg-gray-100 text-gray-700 border-gray-300' }; // Default
+    switch (status?.toLowerCase()) {
+      case 'en_attente':
+        style = { label: "En attente", colorClasses: "bg-yellow-100 text-yellow-700 border-yellow-300" };
+        break;
+      case 'approuve':
+        style = { label: "Approuvé", colorClasses: "bg-green-100 text-green-700 border-green-300" };
+        break;
+      case 'rejete':
+        style = { label: "Rejeté", colorClasses: "bg-red-100 text-red-700 border-red-300" };
+        break;
+    }
     return (
-      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${color} shadow-sm`}>
-        {label}
+      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${style.colorClasses}`}>
+        {style.label}
       </span>
     );
   };
 
+  // --- Admin-theme CSS classes ---
+  const inputClasses = "w-full p-2.5 border border-[#C8D9E6] rounded-md focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] transition-colors outline-none text-[#2F4156] bg-white text-sm";
+  const buttonPrimaryClasses = "flex items-center justify-center px-4 py-2 bg-[#567C8D] text-white text-sm font-semibold rounded-md shadow-sm hover:bg-[#4A6582] transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed";
+  const buttonSecondaryClasses = "flex items-center justify-center px-4 py-2 bg-[#E2E8F0] hover:bg-[#CBD5E1] text-[#2F4156] text-sm font-medium rounded-md transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed";
+
+
   return (
-    <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-4xl mx-auto border border-gray-100">
-      <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-800">Gestion des Matériaux</h2>
-        <div className="flex space-x-3">
-          <button 
-            onClick={() => fetchMaterials()}
-            className="flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors duration-200 shadow-sm border border-blue-100"
-            disabled={loading}
-          >
-            {loading ? 
-              <Loader2 size={16} className="mr-2 animate-spin" /> : 
-              <RefreshCw size={16} className="mr-2" />
-            }
-            Actualiser
-          </button>
-          <button 
-            onClick={() => {
-              setShowForm(!showForm);
-              if (editMode) resetForm();
-            }}
-            className={`flex items-center px-4 py-2 rounded-md transition-colors duration-200 shadow-sm ${
-              showForm 
-                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200' 
-                : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-700'
-            }`}
-          >
-            {showForm ? 'Annuler' : (
-              <>
-                <Plus size={16} className="mr-2" />
-                Nouvelle Demande
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#F5EFEB] p-4 md:p-6">
+      <Notification 
+        show={notification.show} 
+        message={notification.message} 
+        type={notification.type}
+        onDismiss={() => setNotificationState(prev => ({ ...prev, show: false }))} 
+      />
 
-      {/* Success message */}
-      {actionSuccess && (
-        <div className="bg-green-50 text-green-700 p-4 rounded-md mb-4 flex items-center border border-green-100 shadow-sm animate-fade-in">
-          <Check size={18} className="mr-2" />
-          {actionSuccess}
-        </div>
-      )}
+      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <header className="bg-[#F5EFEB]/80 text-[#2F4156] px-6 py-4 border-b border-[#C8D9E6]">
+          <h1 className="text-2xl font-bold tracking-tight">Mes Demandes de Matériel</h1>
+        </header>
 
-      {/* Error message */}
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4 flex items-center border border-red-100 shadow-sm">
-          <X size={18} className="mr-2" />
-          Erreur: {error}
-        </div>
-      )}
+        <div className="p-6">
+          <div className="flex flex-col sm:flex-row justify-end items-center mb-6 gap-3">
+            <button onClick={fetchMaterials} disabled={loading} className={buttonSecondaryClasses}>
+              <FaSync size={16} className={`mr-2 ${loading && !formLoading ? 'animate-spin' : ''}`} /> Actualiser
+            </button>
+            <button onClick={toggleForm} className={`${showForm ? 'bg-red-500 hover:bg-red-600' : 'bg-[#567C8D] hover:bg-[#4A6582]'} text-white text-sm font-semibold px-4 py-2 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center w-full sm:w-auto`} disabled={formLoading}>
+              {showForm ? <FaTimesCircle size={16} className="mr-2" /> : <FaPlus size={16} className="mr-2" />}
+              {showForm ? 'Annuler' : 'Nouvelle Demande'}
+            </button>
+          </div>
 
-      {/* Add/Edit Form */}
-      {showForm && (
-        <div className="bg-gray-50 p-6 rounded-lg mb-8 shadow-md border border-gray-200 transition-all duration-300 ease-in-out">
-          <h3 className="text-lg font-medium mb-6 text-gray-800 flex items-center">
-            {editMode ? (
-              <>
-                <Edit size={18} className="mr-2 text-blue-600" />
-                Modifier la demande
-              </>
-            ) : (
-              <>
-                <Plus size={18} className="mr-2 text-green-600" />
-                Nouvelle demande de matériel
-              </>
-            )}
-          </h3>
-          <div className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="nom" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom du matériel
-                </label>
-                <input
-                  type="text"
-                  id="nom"
-                  name="nom"
-                  value={formData.nom}
-                  onChange={handleChange}
-                  required
-                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-                  placeholder="Nom du matériel demandé"
-                />
-              </div>
-              <div>
-                <label htmlFor="quantite" className="block text-sm font-medium text-gray-700 mb-1">
-                  Quantité
-                </label>
-                <input
-                  type="number"
-                  id="quantite"
-                  name="quantite"
-                  min="1"
-                  value={formData.quantite}
-                  onChange={handleChange}
-                  required
-                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-                />
-              </div>
-            </div>
-            <div>
-              <label htmlFor="motif" className="block text-sm font-medium text-gray-700 mb-1">
-                Motif de la demande
-              </label>
-              <textarea
-                id="motif"
-                name="motif"
-                value={formData.motif}
-                onChange={handleChange}
-                required
-                rows="3"
-                placeholder="Décrivez pourquoi vous avez besoin de ce matériel..."
-                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-              ></textarea>
-            </div>
-            <div className="flex justify-end space-x-3 pt-2">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 shadow-sm border border-gray-300"
-                disabled={formLoading}
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={formLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 shadow-sm border border-blue-700 flex items-center"
-              >
-                {formLoading ? (
-                  <>
-                    <Loader2 size={16} className="mr-2 animate-spin" />
-                    Traitement...
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} className="mr-2" />
+          <SlideDown isVisible={showForm}>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg shadow-inner p-6 mb-6">
+              <h3 className="text-xl font-semibold text-[#2F4156] border-b border-[#C8D9E6] pb-3 mb-6 flex items-center">
+                {editMode ? <FaEdit size={18} className="mr-2 text-[#567C8D]" /> : <FaPlus size={18} className="mr-2 text-[#567C8D]" />}
+                {editMode ? 'Modifier la demande' : 'Nouvelle demande de matériel'}
+              </h3>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="nom" className="block text-sm font-medium text-[#567C8D] mb-1">Nom du matériel <span className="text-red-500">*</span></label>
+                    <input type="text" id="nom" name="nom" value={formData.nom} onChange={handleChange} required className={inputClasses} placeholder="Ex: Clavier ergonomique"/>
+                  </div>
+                  <div>
+                    <label htmlFor="quantite" className="block text-sm font-medium text-[#567C8D] mb-1">Quantité <span className="text-red-500">*</span></label>
+                    <input type="number" id="quantite" name="quantite" min="1" value={formData.quantite} onChange={handleChange} required className={inputClasses}/>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="motif" className="block text-sm font-medium text-[#567C8D] mb-1">Motif <span className="text-red-500">*</span></label>
+                  <textarea id="motif" name="motif" value={formData.motif} onChange={handleChange} required rows="3" placeholder="Pourquoi avez-vous besoin de ce matériel?" className={`${inputClasses} min-h-[80px]`}></textarea>
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button type="button" onClick={resetForm} className={buttonSecondaryClasses} disabled={formLoading}>
+                    <FaTimesCircle size={16} className="mr-2" /> Annuler
+                  </button>
+                  <button type="submit" disabled={formLoading} className={buttonPrimaryClasses}>
+                    {formLoading ? <FaSpinner size={18} className="animate-spin mr-2" /> : <FaSave size={16} className="mr-2" />}
                     {editMode ? 'Mettre à jour' : 'Soumettre'}
-                  </>
-                )}
-              </button>
+                  </button>
+                </div>
+              </form>
             </div>
+          </SlideDown>
+
+          {/* Materials Table */}
+          <div className="bg-white border border-[#C8D9E6] rounded-lg shadow-md overflow-hidden">
+             <div className="border-b border-[#C8D9E6] bg-[#F5EFEB]/80 px-4 py-3.5">
+                <h2 className="text-lg font-semibold text-[#2F4156]">Historique des Demandes</h2>
+            </div>
+            {loading && materials.length === 0 ? (
+                 <div className="p-4 animate-pulse"> {/* Simple Skeleton */}
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="grid grid-cols-5 gap-4 py-3.5 border-b border-[#C8D9E6]/40 items-center">
+                        {[...Array(4)].map((_,j) => <div key={j} className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>)}
+                        <div className="h-8 bg-[#C8D9E6]/70 rounded w-full col-span-1 flex gap-1 p-1">
+                            <div className="h-full bg-[#A0B9CD]/80 rounded w-1/2"></div><div className="h-full bg-[#A0B9CD]/80 rounded w-1/2"></div>
+                        </div>
+                        </div>
+                    ))}
+                </div>
+            ) : !loading && materials.length === 0 ? (
+              <div className="p-10 text-center flex flex-col items-center">
+                <FaBoxOpen size={40} className="mx-auto text-[#A0B9CD] mb-4" />
+                <p className="text-xl font-medium text-[#2F4156]">Aucune demande de matériel.</p>
+                <p className="text-[#567C8D] mt-2">Vous n'avez pas encore soumis de demande.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-[#C8D9E6]/30">
+                    <tr>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Nom Matériel</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Motif</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Qté</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Statut</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#C8D9E6]/70">
+                    {materials.map((material) => (
+                      <tr key={material.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150">
+                        <td className="py-3 px-4 whitespace-nowrap text-sm font-medium text-[#2F4156]">{material.nom}</td>
+                        <td className="py-3 px-4 text-sm text-[#567C8D] whitespace-normal max-w-xs break-words" title={material.motif}>{material.motif}</td>
+                        <td className="py-3 px-4 whitespace-nowrap text-sm text-center text-[#567C8D]">{material.quantite}</td>
+                        <td className="py-3 px-4 whitespace-nowrap"><StatusBadge status={material.statut} /></td>
+                        <td className="py-3 px-4 whitespace-nowrap text-sm text-center">
+                          {material.statut === 'en_attente' ? (
+                            <div className="flex justify-center items-center gap-2">
+                              <button onClick={() => handleEdit(material)} className="text-[#567C8D] hover:text-[#2F4156] p-1.5 hover:bg-[#E2E8F0] rounded-md transition-colors" title="Modifier">
+                                <FaEdit size={16} />
+                              </button>
+                              <button onClick={() => handleDelete(material.id)} disabled={deleteLoadingId === material.id} className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-100 rounded-md transition-colors" title="Supprimer">
+                                {deleteLoadingId === material.id ? <FaSpinner size={16} className="animate-spin" /> : <FaTrashAlt size={16} />}
+                              </button>
+                            </div>
+                          ) : (<span className="text-xs text-gray-400 italic">Traité</span>)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
-      )}
-
-      {/* Materials Table */}
-      <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-md">
-        {loading ? (
-          <div className="flex justify-center p-12 bg-white">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <p className="mt-4 text-gray-600">Chargement des données...</p>
-            </div>
-          </div>
-        ) : materials.length === 0 ? (
-          <div className="text-center p-12 bg-white">
-            <div className="flex flex-col items-center">
-              <div className="rounded-full h-16 w-16 bg-gray-100 flex items-center justify-center mb-4">
-                <RefreshCw size={24} className="text-gray-400" />
-              </div>
-              <p className="text-gray-500 font-medium">Aucune demande de matériel trouvée.</p>
-              <p className="text-gray-400 text-sm mt-1">Créez une nouvelle demande avec le bouton "Nouvelle Demande"</p>
-            </div>
-          </div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200 bg-white">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nom du matériel
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Motif
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Quantité
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Statut
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {materials.map((material) => (
-                <tr key={material.id} className="hover:bg-gray-50 transition-colors duration-150">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{material.nom}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-500 line-clamp-2">{material.motif}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{material.quantite}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusBadge status={material.statut} />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                    <div className="flex justify-end space-x-3">
-                      {material.statut === 'en_attente' && (
-                        <>
-                          <button
-                            onClick={() => handleEdit(material)}
-                            className="text-blue-600 hover:text-blue-800 bg-blue-50 p-2 rounded-full hover:bg-blue-100 transition-colors duration-200"
-                            title="Modifier"
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(material.id)}
-                            disabled={deleteLoading === material.id}
-                            className="text-red-600 hover:text-red-800 bg-red-50 p-2 rounded-full hover:bg-red-100 transition-colors duration-200"
-                            title="Supprimer"
-                          >
-                            {deleteLoading === material.id ? 
-                              <Loader2 size={16} className="animate-spin" /> : 
-                              <Trash2 size={16} />
-                            }
-                          </button>
-                        </>
-                      )}
-                      {material.statut !== 'en_attente' && (
-                        <span className="bg-gray-100 text-gray-500 text-xs italic px-3 py-1 rounded-md">Non modifiable</span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <footer className="text-center py-3 border-t border-[#C8D9E6] bg-[#F5EFEB]/80 text-xs text-[#567C8D]">
+            Gestion des Demandes de Matériel © {new Date().getFullYear()}
+        </footer>
       </div>
-
-      {/* Style for fade-in animation */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-in-out;
-        }
-      `}</style>
     </div>
   );
 }
