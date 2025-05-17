@@ -1,319 +1,326 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+// Admin-theme icons
 import { 
-    Home, 
-    Calendar, 
-    BookOpen, 
-    FileText, 
-    FileCheck, 
-    Clock,
-    CheckCircle,
-    AlertCircle,
-    MoreHorizontal,
-    Briefcase,
-    Laptop
-  } from 'lucide-react';
+    FaUserCircle, FaCalendarCheck, FaBookReader, FaFileSignature, FaBoxOpen, 
+    FaHourglassHalf, FaCheckCircle, FaTimesCircle, FaArrowRight, FaSpinner,
+    FaQuestionCircle
+} from 'react-icons/fa';
+
+// --- Mock/Helper API URL (not for new endpoints, but for consistency) ---
+const API_BASE_URL = 'http://localhost:8000/api/employe'; 
+const EMPLOYE_TOKEN_KEY = 'employe_token';
+
+// --- Re-usable Themed Components (Simplified for Dashboard Context) ---
+const StatCard = ({ title, value, icon, color, unit = '', loading = false, linkTo }) => (
+  <Link 
+    to={linkTo || '#'} 
+    className={`bg-white p-5 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-200 flex flex-col justify-between min-h-[130px] ${linkTo ? 'cursor-pointer' : ''}`}
+  >
+    <div className="flex items-start justify-between">
+      <h3 className={`text-sm font-semibold ${color ? `text-${color}-600` : 'text-[#567C8D]'}`}>{title}</h3>
+      <div className={`p-2 rounded-full ${color ? `bg-${color}-100 text-${color}-600` : 'bg-slate-100 text-slate-600'}`}>
+        {loading ? <FaSpinner className="animate-spin" size={18} /> : icon}
+      </div>
+    </div>
+    <div className="mt-2">
+      {loading ? (
+        <div className="h-8 bg-slate-200 rounded animate-pulse w-3/4"></div>
+      ) : (
+        <p className={`text-3xl font-bold ${color ? `text-${color}-700` : 'text-[#2F4156]'}`}>
+          {value} <span className="text-sm font-normal text-gray-500">{unit}</span>
+        </p>
+      )}
+    </div>
+  </Link>
+);
+
+const QuickLinkCard = ({ title, description, icon, linkTo, bgColorClass = 'bg-[#567C8D]' }) => (
+  <Link to={linkTo} className={`p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 text-white flex flex-col items-start ${bgColorClass}`}>
+    <div className="mb-3 p-3 bg-white/20 rounded-full">
+      {icon}
+    </div>
+    <h3 className="text-lg font-semibold mb-1">{title}</h3>
+    <p className="text-xs opacity-80 mb-4 flex-grow">{description}</p>
+    <div className="mt-auto text-sm font-medium flex items-center group">
+      Accéder <FaArrowRight size={12} className="ml-1.5 transition-transform duration-200 group-hover:translate-x-1" />
+    </div>
+  </Link>
+);
+
+
+export default function DashboardEmploye() {
+  // For simplicity, we'll fetch minimal summary data here.
+  // In a real app, this might come from a context or dedicated dashboard API.
+  const [summaryData, setSummaryData] = useState({
+    congesEnAttente: 0,
+    soldeConges: null, // Placeholder
+    formationsEnAttente: 0,
+    formationsApprouvees: 0,
+    attestationsEnAttente: 0,
+    materielEnAttente: 0,
+  });
+  const [loadingSummary, setLoadingSummary] = useState(true);
+  const [error, setError] = useState(null);
   
-  // Recent updates data
-  const recentUpdates = [
-    {
-      id: 1,
-      title: "Demande de congé approuvée",
-      description: "Votre demande de congé pour le 15-20 juin 2025 a été approuvée",
-      date: "Il y a 2 heures",
-      icon: <CheckCircle size={20} className="text-green-500" />,
-      type: "success"
-    },
-    {
-      id: 2,
-      title: "Nouvelle fiche de paie disponible",
-      description: "Votre fiche de paie pour le mois d'avril 2025 est maintenant disponible",
-      date: "Il y a 1 jour",
-      icon: <FileText size={20} className="text-blue-500" />,
-      type: "info"
-    },
-    {
-      id: 3,
-      title: "Rappel: Formation obligatoire",
-      description: "Formation sur la sécurité des données prévue pour le 12 mai 2025",
-      date: "Il y a 3 jours",
-      icon: <AlertCircle size={20} className="text-amber-500" />,
-      type: "warning"
-    },
-    {
-      id: 4,
-      title: "Nouveau matériel attribué",
-      description: "Un nouveau laptop Dell XPS 15 a été attribué à votre compte",
-      date: "Il y a 4 jours",
-      icon: <Laptop size={20} className="text-purple-500" />,
-      type: "info"
+  // Dummy user name - replace with actual data if available
+  const [employeeName, setEmployeeName] = useState("Employé"); 
+
+  const getToken = () => localStorage.getItem(EMPLOYE_TOKEN_KEY);
+
+  // --- Data Fetching Logic (Simplified & Aggregated) ---
+  const fetchDashboardData = useCallback(async () => {
+    setLoadingSummary(true);
+    setError(null);
+    const token = getToken();
+    if (!token) {
+      setError("Utilisateur non authentifié.");
+      setLoadingSummary(false);
+      return;
     }
-  ];
-  
-  // Stats data
-  const statsData = [
-    {
-      title: "Jours de congé restants",
-      value: "14",
-      icon: <Calendar size={20} className="text-blue-500" />,
-      change: "+2 depuis le mois dernier",
-      positive: true
-    },
-    {
-      title: "Demandes en attente",
-      value: "2",
-      icon: <Clock size={20} className="text-amber-500" />,
-      change: "Aucun changement",
-      positive: null
-    },
-    {
-      title: "Formations complétées",
-      value: "3",
-      icon: <CheckCircle size={20} className="text-green-500" />,
-      change: "+1 depuis le mois dernier",
-      positive: true
-    },
-    {
-      title: "Équipements attribués",
-      value: "5",
-      icon: <Briefcase size={20} className="text-purple-500" />,
-      change: "+1 depuis le mois dernier",
-      positive: true
+
+    try {
+      // Simulate fetching from multiple sources.
+      // In a real app, prefer a single dashboard endpoint if possible.
+
+      // 1. Conges Summary
+      let congesEnAttente = 0;
+      let soldeCongesCalculated = null; // Default to null
+      try {
+        const congesRes = await fetch(`${API_BASE_URL}/conges`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
+        if (congesRes.ok) {
+          const congesData = await congesRes.json();
+          const congesArray = Array.isArray(congesData.conges) ? congesData.conges : (Array.isArray(congesData) ? congesData : []);
+          congesEnAttente = congesArray.filter(c => c.statut === 'en_attente').length;
+          
+          // Try to get saldo from conges endpoint if it provides it (like in refactored Conge.js)
+          if (congesData.leave_balance && congesData.leave_balance.solde_restant_total !== undefined) {
+            soldeCongesCalculated = congesData.leave_balance.solde_restant_total;
+          } else { // Fallback: very basic client-side calculation (less accurate)
+            const annee = new Date().getFullYear();
+            const joursDejaPris = congesArray
+              .filter(c => c.statut === 'approuve' && new Date(c.date_debut).getFullYear() === annee)
+              .reduce((total, c) => {
+                  const start = new Date(c.date_debut);
+                  const end = new Date(c.date_fin);
+                  if (isNaN(start.getTime()) || isNaN(end.getTime())) return total;
+                  const diffTime = Math.abs(end - start);
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                  return total + diffDays;
+              }, 0);
+            soldeCongesCalculated = 30 - joursDejaPris; // Assuming 30 days base
+          }
+        }
+      } catch (e) { console.error("Erreur chargement résumé congés:", e); }
+
+      // 2. Formations Summary
+      let formationsEnAttente = 0;
+      let formationsApprouvees = 0;
+      try {
+        const formationsRes = await fetch(`${API_BASE_URL}/demandes-formations`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
+        if (formationsRes.ok) {
+          const formationsData = await formationsRes.json();
+          const formationsArray = Array.isArray(formationsData) ? formationsData : [];
+          formationsEnAttente = formationsArray.filter(f => f.statut === 'en attente').length;
+          formationsApprouvees = formationsArray.filter(f => f.statut === 'approuvée' || f.statut === 'approuve').length;
+        }
+      } catch (e) { console.error("Erreur chargement résumé formations:", e); }
+
+      // 3. Attestations Summary
+      let attestationsEnAttente = 0;
+      try {
+        const attestationsRes = await fetch(`${API_BASE_URL}/mes-demandes`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
+        if (attestationsRes.ok) {
+          const attestationsData = await attestationsRes.json();
+          const attestationsArray = Array.isArray(attestationsData) ? attestationsData : (Array.isArray(attestationsData.data) ? attestationsData.data : []);
+          attestationsEnAttente = attestationsArray.filter(a => a.statut === 'en attente').length;
+        }
+      } catch (e) { console.error("Erreur chargement résumé attestations:", e); }
+
+      // 4. Matériel Summary
+      let materielEnAttente = 0;
+      try {
+        const materielRes = await fetch(`${API_BASE_URL}/material`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
+        if (materielRes.ok) {
+          const materielData = await materielRes.json();
+          const materielArray = Array.isArray(materielData) ? materielData : [];
+          materielEnAttente = materielArray.filter(m => m.statut === 'en_attente').length;
+        }
+      } catch (e) { console.error("Erreur chargement résumé matériel:", e); }
+
+
+      setSummaryData({
+        congesEnAttente,
+        soldeConges: soldeCongesCalculated,
+        formationsEnAttente,
+        formationsApprouvees,
+        attestationsEnAttente,
+        materielEnAttente,
+      });
+
+    } catch (mainError) {
+      setError("Impossible de charger les données du tableau de bord.");
+      console.error("Erreur principale dashboard:", mainError);
+    } finally {
+      setLoadingSummary(false);
     }
-  ];
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+    // Fetch employee name if you have an endpoint for it, e.g., /employe/profile
+    // For now, using a static name.
+  }, [fetchDashboardData]);
   
-  // Tasks data
-  const tasksData = [
-    {
-      id: 1,
-      title: "Soumettre note de frais",
-      dueDate: "15 mai 2025",
-      status: "pending",
-      priority: "high"
-    },
-    {
-      id: 2,
-      title: "Compléter évaluation annuelle",
-      dueDate: "20 mai 2025",
-      status: "pending",
-      priority: "medium"
-    },
-    {
-      id: 3,
-      title: "Mise à jour du profil",
-      dueDate: "10 mai 2025",
-      status: "completed",
-      priority: "low"
-    }
-  ];
-  
-  // Upcoming events data
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: "Réunion d'équipe",
-      date: "10 mai 2025",
-      time: "10:00 - 11:30",
-      location: "Salle A3"
-    },
-    {
-      id: 2,
-      title: "Formation sécurité",
-      date: "12 mai 2025",
-      time: "14:00 - 16:00",
-      location: "Salle de conférence"
-    },
-    {
-      id: 3,
-      title: "Entretien annuel",
-      date: "25 mai 2025",
-      time: "15:00 - 16:00",
-      location: "Bureau RH"
-    }
-  ];
-  
-  // Dashboard component
-  const DashboardEmploye = () => {
+
+  const greeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Bonjour";
+    if (hour < 18) return "Bon après-midi";
+    return "Bonsoir";
+  };
+
+  if (error && !loadingSummary) {
     return (
-      <div className="bg-gray-100 min-h-screen p-4 md:p-6">
-        {/* Dashboard Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Bonjour, Jean</h1>
-          <p className="text-gray-600">Bienvenue dans votre espace personnel</p>
+      <div className="min-h-screen bg-[#F5EFEB] p-4 md:p-6 flex items-center justify-center">
+        <div className="p-10 text-center bg-white rounded-xl shadow-lg">
+            <FaExclamationTriangle size={48} className="mx-auto text-red-500 mb-4" />
+            <p className="text-xl font-semibold text-[#2F4156] mb-2">Erreur de chargement</p>
+            <p className="text-[#567C8D]">{error}</p>
+            <button 
+                onClick={fetchDashboardData}
+                className="mt-6 px-4 py-2 bg-[#567C8D] text-white rounded-lg hover:bg-[#4A6582] transition-colors text-sm font-medium"
+            >
+                Réessayer
+            </button>
         </div>
-            
-            {/* Stats grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {statsData.map((stat, index) => (
-                <div key={index} className="bg-white rounded-lg shadow p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-medium text-gray-500">{stat.title}</div>
-                    <div className="p-2 rounded-full bg-gray-100">{stat.icon}</div>
-                  </div>
-                  <div className="text-2xl font-bold text-gray-800 mb-1">{stat.value}</div>
-                  <div className={`text-xs ${
-                    stat.positive === true ? 'text-green-500' : 
-                    stat.positive === false ? 'text-red-500' : 
-                    'text-gray-500'
-                  }`}>
-                    {stat.change}
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Recent updates */}
-              <div className="lg:col-span-2">
-                <div className="bg-white rounded-lg shadow mb-6">
-                  <div className="p-4 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-medium text-gray-800">Dernières mises à jour</h2>
-                      <button className="text-sm text-blue-600 hover:text-blue-700">Voir tout</button>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4">
-                    <div className="space-y-4">
-                      {recentUpdates.map((update) => (
-                        <div key={update.id} className="flex items-start">
-                          <div className="flex-shrink-0 mt-1">
-                            <div className={`p-2 rounded-full ${
-                              update.type === 'success' ? 'bg-green-100' :
-                              update.type === 'warning' ? 'bg-amber-100' :
-                              'bg-blue-100'
-                            }`}>
-                              {update.icon}
-                            </div>
-                          </div>
-                          <div className="ml-3 flex-1">
-                            <div className="flex items-center justify-between">
-                              <h3 className="text-sm font-medium text-gray-800">{update.title}</h3>
-                              <span className="text-xs text-gray-500">{update.date}</span>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1">{update.description}</p>
-                          </div>
-                          <button className="ml-2 text-gray-400 hover:text-gray-600">
-                            <MoreHorizontal size={16} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Tasks */}
-                <div className="bg-white rounded-lg shadow">
-                  <div className="p-4 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-medium text-gray-800">Tâches à faire</h2>
-                      <button className="text-sm text-blue-600 hover:text-blue-700">Voir tout</button>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4">
-                    <div className="space-y-3">
-                      {tasksData.map((task) => (
-                        <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={task.status === 'completed'}
-                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                              readOnly
-                            />
-                            <div className="ml-3">
-                              <p className={`text-sm font-medium ${
-                                task.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-800'
-                              }`}>{task.title}</p>
-                              <p className="text-xs text-gray-500">Échéance: {task.dueDate}</p>
-                            </div>
-                          </div>
-                          <div className={`px-2 py-1 text-xs rounded-full ${
-                            task.priority === 'high' ? 'bg-red-100 text-red-800' :
-                            task.priority === 'medium' ? 'bg-amber-100 text-amber-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {task.priority === 'high' ? 'Haute' :
-                             task.priority === 'medium' ? 'Moyenne' : 'Basse'}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Upcoming events */}
-              <div className="lg:col-span-1">
-                <div className="bg-white rounded-lg shadow mb-6">
-                  <div className="p-4 border-b border-gray-200">
-                    <h2 className="text-lg font-medium text-gray-800">Événements à venir</h2>
-                  </div>
-                  
-                  <div className="p-4">
-                    <div className="space-y-4">
-                      {upcomingEvents.map((event) => (
-                        <div key={event.id} className="border-l-4 border-blue-500 pl-3 py-2">
-                          <h3 className="text-sm font-medium text-gray-800">{event.title}</h3>
-                          <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <Calendar size={14} className="mr-1" />
-                            <span>{event.date}</span>
-                          </div>
-                          <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <Clock size={14} className="mr-1" />
-                            <span>{event.time}</span>
-                          </div>
-                          <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <Home size={14} className="mr-1" />
-                            <span>{event.location}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Quick access */}
-                <div className="bg-white rounded-lg shadow">
-                  <div className="p-4 border-b border-gray-200">
-                    <h2 className="text-lg font-medium text-gray-800">Accès rapide</h2>
-                  </div>
-                  
-                  <div className="p-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <button className="flex flex-col items-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <div className="p-2 rounded-full bg-blue-100 text-blue-600">
-                          <Calendar size={20} />
-                        </div>
-                        <span className="text-xs font-medium mt-2 text-gray-700">Demande de congé</span>
-                      </button>
-                      
-                      <button className="flex flex-col items-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <div className="p-2 rounded-full bg-purple-100 text-purple-600">
-                          <FileText size={20} />
-                        </div>
-                        <span className="text-xs font-medium mt-2 text-gray-700">Fiche de paie</span>
-                      </button>
-                      
-                      <button className="flex flex-col items-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <div className="p-2 rounded-full bg-green-100 text-green-600">
-                          <FileCheck size={20} />
-                        </div>
-                        <span className="text-xs font-medium mt-2 text-gray-700">Attestations</span>
-                      </button>
-                      
-                      <button className="flex flex-col items-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <div className="p-2 rounded-full bg-amber-100 text-amber-600">
-                          <BookOpen size={20} />
-                        </div>
-                        <span className="text-xs font-medium mt-2 text-gray-700">Formations</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
       </div>
     );
-  };
-  
-  export default DashboardEmploye;
+  }
+
+
+  return (
+    <div className="min-h-screen bg-[#F5EFEB] p-4 md:p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-[#2F4156]">{greeting()}, {employeeName}!</h1>
+          <p className="text-[#567C8D] mt-1">Voici un aperçu de votre espace employé.</p>
+        </div>
+
+        {/* Quick Stats Section */}
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold text-[#2F4156] mb-4">Vos Statistiques Clés</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <StatCard 
+              title="Solde de Congés Restant" 
+              value={summaryData.soldeConges !== null ? summaryData.soldeConges : '--'} 
+              unit="jours" 
+              icon={<FaCalendarCheck size={20} />} 
+              color="blue"
+              loading={loadingSummary && summaryData.soldeConges === null}
+              linkTo="/employe/conges"
+            />
+            <StatCard 
+              title="Congés en Attente" 
+              value={summaryData.congesEnAttente} 
+              icon={<FaHourglassHalf size={20} />} 
+              color="yellow"
+              loading={loadingSummary}
+              linkTo="/employe/conges"
+            />
+            <StatCard 
+              title="Formations Approuvées" 
+              value={summaryData.formationsApprouvees} 
+              icon={<FaCheckCircle size={20} />} 
+              color="green"
+              loading={loadingSummary}
+              linkTo="/employe/formations" // Assuming tab switch handled there
+            />
+             <StatCard 
+              title="Formations en Attente" 
+              value={summaryData.formationsEnAttente} 
+              icon={<FaHourglassHalf size={20} />} 
+              color="yellow"
+              loading={loadingSummary}
+              linkTo="/employe/formations"
+            />
+            <StatCard 
+              title="Attestations en Attente" 
+              value={summaryData.attestationsEnAttente} 
+              icon={<FaFileSignature size={20} />} 
+              color="purple"
+              loading={loadingSummary}
+              linkTo="/employe/attestations"
+            />
+            <StatCard 
+              title="Matériel en Attente" 
+              value={summaryData.materielEnAttente} 
+              icon={<FaBoxOpen size={20} />} 
+              color="indigo"
+              loading={loadingSummary}
+              linkTo="/employe/material"
+            />
+          </div>
+        </section>
+
+        {/* Quick Links Section */}
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold text-[#2F4156] mb-4">Accès Rapides</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <QuickLinkCard 
+              title="Mes Congés" 
+              description="Consultez votre solde et faites une demande." 
+              icon={<FaCalendarCheck size={24} />} 
+              linkTo="/employe/conges"
+              bgColorClass="bg-blue-500 hover:bg-blue-600"
+            />
+            <QuickLinkCard 
+              title="Mes Formations" 
+              description="Inscrivez-vous et suivez vos formations." 
+              icon={<FaBookReader size={24} />} 
+              linkTo="/employe/formations"
+              bgColorClass="bg-teal-500 hover:bg-teal-600"
+            />
+            <QuickLinkCard 
+              title="Mes Attestations" 
+              description="Demandez vos attestations de travail ou de salaire." 
+              icon={<FaFileSignature size={24} />} 
+              linkTo="/employe/attestations"
+              bgColorClass="bg-purple-500 hover:bg-purple-600"
+            />
+            <QuickLinkCard 
+              title="Mes Matériels" 
+              description="Faites une demande pour le matériel nécessaire." 
+              icon={<FaBoxOpen size={24} />} 
+              linkTo="/employe/material"
+              bgColorClass="bg-indigo-500 hover:bg-indigo-600"
+            />
+          </div>
+        </section>
+        
+        {/* Placeholder for Recent Activity or Announcements */}
+        {/* This section would ideally be powered by specific backend data */}
+        <section>
+            <h2 className="text-xl font-semibold text-[#2F4156] mb-4">Activité Récente / Annonces</h2>
+            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                {loadingSummary ? (
+                    <div className="space-y-3">
+                        <div className="h-4 bg-slate-200 rounded animate-pulse w-3/4"></div>
+                        <div className="h-4 bg-slate-200 rounded animate-pulse w-1/2"></div>
+                        <div className="h-4 bg-slate-200 rounded animate-pulse w-5/6"></div>
+                    </div>
+                ) : (
+                    <div className="text-center py-8 text-[#567C8D]">
+                        <FaQuestionCircle size={32} className="mx-auto mb-3 text-[#A0B9CD]" />
+                        <p>Aucune activité récente à afficher pour le moment.</p>
+                        <p className="text-xs mt-1">Les annonces ou les mises à jour importantes apparaîtront ici.</p>
+                    </div>
+                )}
+            </div>
+        </section>
+
+      </div>
+    </div>
+  );
+}
