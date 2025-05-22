@@ -4,8 +4,6 @@ import {
     FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaSpinner, 
     FaTimes, FaPlusCircle, FaRegCalendarAlt, FaCheck
 } from 'react-icons/fa';
-// Note: FaTrashAlt, FaEdit, FaInfoCircle were in your admin imports but not used in the final employee Conge page.
-// If you re-introduce edit/delete for employees, you might need them.
 
 // --- Re-usable components (Themed like Admin) ---
 
@@ -95,8 +93,6 @@ export default function Conge() {
     const timer = setTimeout(() => {
       setNotification(prev => ({ ...prev, show: false }));
     }, duration);
-    // Return a cleanup function for useEffect if needed, though not strictly necessary here
-    // as setNotification is stable if its definition doesn't change.
     return () => clearTimeout(timer); 
   };
 
@@ -123,20 +119,19 @@ export default function Conge() {
       }
       
       const data = await response.json();
-      const congesData = Array.isArray(data.conges) ? data.conges : (Array.isArray(data) ? data : []); // Adapt based on your API response structure
+      const congesData = Array.isArray(data.conges) ? data.conges : (Array.isArray(data) ? data : []);
       setConges(congesData);
 
       const annee = new Date().getFullYear();
       let joursDejaPris = 0;
-      // Use backend-provided leave balance if available, otherwise calculate
-      if (data.leave_balance && data.leave_balance.jours_utilises !== undefined) {
-        joursDejaPris = data.leave_balance.jours_utilises_annee_actuelle || 0; // Expecting this from backend
+      if (data.leave_balance && data.leave_balance.jours_utilises_annee_actuelle !== undefined) {
+        joursDejaPris = data.leave_balance.jours_utilises_annee_actuelle || 0;
         setLeaveBalance({
             jours_utilises: joursDejaPris,
-            solde_restant: data.leave_balance.solde_restant_total || (30 - joursDejaPris), // Use total saldo from backend if available
-            jours_demandes_actuellement: 0, // Reset on fetch
+            solde_restant: data.leave_balance.solde_restant_total || (30 - joursDejaPris),
+            jours_demandes_actuellement: 0,
         });
-      } else { // Fallback to client-side calculation
+      } else {
         joursDejaPris = congesData
             .filter(conge => conge.statut === 'approuve' && new Date(conge.date_debut).getFullYear() === annee)
             .reduce((total, conge) => {
@@ -150,18 +145,16 @@ export default function Conge() {
         setLeaveBalance(prev => ({
             ...prev,
             jours_utilises: joursDejaPris,
-            solde_restant: (prev.solde_restant_initial || 30) - joursDejaPris // Assuming 30 if not fetched
+            solde_restant: (prev.solde_restant_initial || 30) - joursDejaPris
         }));
       }
-
-
     } catch (err) {
       setError(err.message);
       showAppNotification(err.message, 'error');
     } finally {
       setIsLoading(false);
     }
-  }, []); // Empty dependency array if showAppNotification is stable
+  }, []); 
 
   useEffect(() => {
     fetchConges();
@@ -231,7 +224,6 @@ export default function Conge() {
         if (responseData.errors) { 
           errorMessage = Object.values(responseData.errors).flat().join(' ');
         }
-        // More specific parsing of quota error from backend
         if (response.status === 403 && responseData.error === "Quota de congés dépassé") {
            errorMessage = `Quota dépassé! ${responseData.message || ''} (Utilisés: ${responseData.jours_utilises_annee_actuelle || 'N/A'}, Demandés: ${responseData.jours_demandes_periode || 'N/A'}, Solde après: ${responseData.solde_restant_apres_demande || 'N/A'})`;
            if (responseData.jours_utilises_annee_actuelle !== undefined) {
@@ -246,7 +238,6 @@ export default function Conge() {
       }
       
       showAppNotification(responseData.message || 'Demande envoyée avec succès!', 'success');
-      // Update leave balance if backend confirms the new state
       if (responseData.leave_balance) {
         setLeaveBalance({
           jours_utilises: responseData.leave_balance.jours_utilises_annee_actuelle,
@@ -254,7 +245,6 @@ export default function Conge() {
           jours_demandes_actuellement: 0
         });
       } else {
-        // Fallback to refetch if no specific balance update from POST response
         fetchConges(); 
       }
       resetForm();
@@ -287,7 +277,7 @@ export default function Conge() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5EFEB] p-4 md:p-6"> 
+    <div className="min-h-screen bg-[#F5EFEB]"> 
       <Notification 
         show={notification.show} 
         message={notification.message} 
@@ -295,179 +285,182 @@ export default function Conge() {
         onDismiss={() => setNotification(prev => ({ ...prev, show: false }))} 
       />
 
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-        <header className="bg-[#F5EFEB]/80 text-[#2F4156] px-6 py-4 border-b border-[#C8D9E6]">
-          <h1 className="text-2xl font-bold tracking-tight">Mes Demandes de Congé</h1>
+      <div className="bg-[#F5EFEB]/80 border-b border-[#C8D9E6] shadow-sm">
+        <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6">
+          <h1 className="text-2xl font-bold tracking-tight text-[#2F4156]">Mes Demandes de Congé</h1>
         </header>
-        
-        <div className="p-6">
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg shadow-sm text-center">
-              <p className="text-sm font-medium text-[#567C8D]">Solde Annuel Total</p>
-              <p className="text-2xl font-bold text-[#2F4156]">30 jours</p>
-            </div>
-            <div className="bg-green-50 border border-green-200 p-4 rounded-lg shadow-sm text-center">
-              <p className="text-sm font-medium text-green-700">Jours Approuvés (cette année)</p>
-              <p className="text-2xl font-bold text-green-800">{leaveBalance.jours_utilises} jours</p>
-            </div>
-            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg shadow-sm text-center">
-              <p className="text-sm font-medium text-yellow-700">Solde Restant</p>
-              <p className="text-2xl font-bold text-yellow-800">{leaveBalance.solde_restant} jours</p>
-            </div>
+      </div>
+      
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg shadow-sm text-center">
+            <p className="text-sm font-medium text-[#567C8D]">Solde Annuel Total</p>
+            <p className="text-2xl font-bold text-[#2F4156]">30 jours</p>
           </div>
+          <div className="bg-green-50 border border-green-200 p-4 rounded-lg shadow-sm text-center">
+            <p className="text-sm font-medium text-green-700">Jours Approuvés (cette année)</p>
+            <p className="text-2xl font-bold text-green-800">{leaveBalance.jours_utilises} jours</p>
+          </div>
+          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg shadow-sm text-center">
+            <p className="text-sm font-medium text-yellow-700">Solde Restant</p>
+            <p className="text-2xl font-bold text-yellow-800">{leaveBalance.solde_restant} jours</p>
+          </div>
+        </div>
 
-          <div className="flex justify-end mb-6">
-            <button 
-              onClick={() => { setShowForm(!showForm); }}
-              className={`flex items-center px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 font-semibold text-sm
-                          ${showForm 
-                            ? 'bg-red-500 hover:bg-red-600 text-white' 
-                            : 'bg-[#567C8D] hover:bg-[#4A6582] text-white'
-                          }`}
-            >
-              {showForm ? (
-                <> <FaTimes className="mr-2" size={16} /> Annuler la demande </>
-              ) : (
-                <> <FaPlusCircle className="mr-2" size={16} /> Faire une demande </>
-              )}
-            </button>
-          </div>
-          
-          <SlideDown isVisible={showForm}>
-            <div className={`bg-slate-50 border border-slate-200 rounded-lg shadow-inner p-6 mb-8`}>
-              <h2 className="text-xl font-semibold text-[#2F4156] border-b border-[#C8D9E6] pb-3 mb-6">
-                Nouvelle demande de congé
-              </h2>
-              
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="date_debut" className="block text-sm font-medium text-[#567C8D] mb-1">Date de début</label>
-                    <input
-                      type="date" id="date_debut" name="date_debut" value={formData.date_debut}
-                      onChange={handleInputChange}
-                      className="w-full p-2.5 border border-[#C8D9E6] rounded-md 
-                                 focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] 
-                                 transition-colors outline-none text-[#2F4156] bg-white"
-                      required disabled={isSubmitting}
-                      min={new Date().toISOString().split('T')[0]}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="date_fin" className="block text-sm font-medium text-[#567C8D] mb-1">Date de fin</label>
-                    <input
-                      type="date" id="date_fin" name="date_fin" value={formData.date_fin}
-                      onChange={handleInputChange}
-                      className="w-full p-2.5 border border-[#C8D9E6] rounded-md 
-                                 focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] 
-                                 transition-colors outline-none text-[#2F4156] bg-white"
-                      required disabled={isSubmitting}
-                      min={formData.date_debut || new Date().toISOString().split('T')[0]}
-                    />
-                  </div>
-                </div>
-                
+        <div className="flex justify-end mb-6">
+          <button 
+            onClick={() => { setShowForm(!showForm); }}
+            className={`flex items-center px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 font-semibold text-sm
+                        ${showForm 
+                          ? 'bg-red-500 hover:bg-red-600 text-white' 
+                          : 'bg-[#567C8D] hover:bg-[#4A6582] text-white'
+                        }`}
+          >
+            {showForm ? (
+              <> <FaTimes className="mr-2" size={16} /> Annuler la demande </>
+            ) : (
+              <> <FaPlusCircle className="mr-2" size={16} /> Faire une demande </>
+            )}
+          </button>
+        </div>
+        
+        <SlideDown isVisible={showForm}>
+          <div className={`bg-slate-50 border border-slate-200 rounded-lg shadow-inner p-6 mb-8`}> {/* This mb-8 might be large if SlideDown's py-6 is also active */}
+            <h2 className="text-xl font-semibold text-[#2F4156] border-b border-[#C8D9E6] pb-3 mb-6">
+              Nouvelle demande de congé
+            </h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label htmlFor="motif" className="block text-sm font-medium text-[#567C8D] mb-1">Motif (optionnel)</label>
-                  <textarea
-                    id="motif" name="motif" value={formData.motif} onChange={handleInputChange}
-                    rows="3"
+                  <label htmlFor="date_debut" className="block text-sm font-medium text-[#567C8D] mb-1">Date de début</label>
+                  <input
+                    type="date" id="date_debut" name="date_debut" value={formData.date_debut}
+                    onChange={handleInputChange}
                     className="w-full p-2.5 border border-[#C8D9E6] rounded-md 
                                focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] 
                                transition-colors outline-none text-[#2F4156] bg-white"
-                    placeholder="Ex: Vacances annuelles, motif personnel..."
-                    disabled={isSubmitting}
-                  ></textarea>
+                    required disabled={isSubmitting}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
                 </div>
-                
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button" onClick={resetForm}
-                    className="px-4 py-2 bg-[#E2E8F0] hover:bg-[#CBD5E1] text-[#2F4156] rounded-md 
-                               transition-colors duration-200 flex items-center font-medium text-sm
-                               disabled:opacity-70 disabled:cursor-not-allowed"
-                    disabled={isSubmitting}
-                  >
-                    <FaTimes size={16} className="mr-2" /> Annuler
-                  </button>
-                  
-                  <button
-                    type="submit" disabled={isSubmitting}
-                    className={`px-5 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md shadow-md 
-                               transition-all duration-200 flex items-center font-semibold text-sm
-                               disabled:opacity-60 disabled:cursor-not-allowed`}
-                  >
-                    {isSubmitting ? (
-                      <> <FaSpinner size={18} className="mr-2 animate-spin" /> Envoi... </>
-                    ) : (
-                      <> <FaCheck size={18} className="mr-2" /> Envoyer la demande </>
-                    )}
-                  </button>
+                <div>
+                  <label htmlFor="date_fin" className="block text-sm font-medium text-[#567C8D] mb-1">Date de fin</label>
+                  <input
+                    type="date" id="date_fin" name="date_fin" value={formData.date_fin}
+                    onChange={handleInputChange}
+                    className="w-full p-2.5 border border-[#C8D9E6] rounded-md 
+                               focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] 
+                               transition-colors outline-none text-[#2F4156] bg-white"
+                    required disabled={isSubmitting}
+                    min={formData.date_debut || new Date().toISOString().split('T')[0]}
+                  />
                 </div>
-              </form>
-            </div>
-          </SlideDown>
-          
-          <div className="bg-white border border-[#C8D9E6] rounded-lg shadow-md overflow-hidden">
-            <div className="border-b border-[#C8D9E6] bg-[#F5EFEB]/80 px-4 py-3.5">
-              <h2 className="text-lg font-semibold text-[#2F4156]">Historique des demandes</h2>
-            </div>
-            
-            {isLoading ? (
-              <SkeletonLoader rows={4} cols={3} /> 
-            ) : error && !conges.length ? (
-              <div className="p-10 text-center flex flex-col items-center">
-                <FaExclamationTriangle size={40} className="mx-auto text-red-500 mb-4" />
-                <p className="text-xl font-medium text-[#2F4156]">{error}</p>
-                <p className="text-[#567C8D] mt-2">Veuillez réessayer ou contacter le support.</p>
-                 <button
-                    onClick={fetchConges}
-                    className="mt-6 px-4 py-2 bg-[#567C8D] text-white rounded-lg hover:bg-[#4A6582] transition-colors text-sm font-medium"
+              </div>
+              
+              <div>
+                <label htmlFor="motif" className="block text-sm font-medium text-[#567C8D] mb-1">Motif (optionnel)</label>
+                <textarea
+                  id="motif" name="motif" value={formData.motif} onChange={handleInputChange}
+                  rows="3"
+                  className="w-full p-2.5 border border-[#C8D9E6] rounded-md 
+                             focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] 
+                             transition-colors outline-none text-[#2F4156] bg-white"
+                  placeholder="Ex: Vacances annuelles, motif personnel..."
+                  disabled={isSubmitting}
+                ></textarea>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button" onClick={resetForm}
+                  className="px-4 py-2 bg-[#E2E8F0] hover:bg-[#CBD5E1] text-[#2F4156] rounded-md 
+                             transition-colors duration-200 flex items-center font-medium text-sm
+                             disabled:opacity-70 disabled:cursor-not-allowed"
+                  disabled={isSubmitting}
                 >
-                    Réessayer
+                  <FaTimes size={16} className="mr-2" /> Annuler
+                </button>
+                
+                <button
+                  type="submit" disabled={isSubmitting}
+                  className={`px-5 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md shadow-md 
+                             transition-all duration-200 flex items-center font-semibold text-sm
+                             disabled:opacity-60 disabled:cursor-not-allowed`}
+                >
+                  {isSubmitting ? (
+                    <> <FaSpinner size={18} className="mr-2 animate-spin" /> Envoi... </>
+                  ) : (
+                    <> <FaCheck size={18} className="mr-2" /> Envoyer la demande </>
+                  )}
                 </button>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead className="bg-[#C8D9E6]/30">
-                    <tr>
-                      <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Date de début</th>
-                      <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Date de fin</th>
-                      <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider hidden md:table-cell">Motif</th>
-                      <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#C8D9E6]/70">
-                    {conges.length === 0 && !isLoading ? (
-                      <tr>
-                        <td colSpan="4" className="px-4 py-12 text-center">
-                          <div className="flex flex-col items-center justify-center">
-                            <FaRegCalendarAlt size={36} className="mx-auto text-[#C8D9E6] mb-3" />
-                            <p className="text-lg font-medium text-[#2F4156]">Aucune demande de congé.</p>
-                            <p className="text-sm text-[#567C8D]">Commencez par faire une nouvelle demande.</p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      conges.map((conge) => (
-                        <tr key={conge.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150">
-                          <td className="py-3 px-4 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(conge.date_debut)}</td>
-                          <td className="py-3 px-4 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(conge.date_fin)}</td>
-                          <td className="py-3 px-4 text-sm text-[#567C8D] hidden md:table-cell truncate max-w-xs" title={conge.motif || ''}>
-                            {conge.motif || <span className="italic text-gray-400">Aucun</span>}
-                          </td>
-                          <td className="py-3 px-4 whitespace-nowrap text-sm">{getStatusBadge(conge.statut)}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            </form>
           </div>
+        </SlideDown>
+        
+        <div className="bg-white border border-[#C8D9E6] rounded-lg shadow-md overflow-hidden">
+          <div className="border-b border-[#C8D9E6] bg-[#F5EFEB]/80 px-4 py-3.5">
+            <h2 className="text-lg font-semibold text-[#2F4156]">Historique des demandes</h2>
+          </div>
+          
+          {isLoading ? (
+            <SkeletonLoader rows={4} cols={3} /> 
+          ) : error && !conges.length ? (
+            <div className="p-10 text-center flex flex-col items-center">
+              <FaExclamationTriangle size={40} className="mx-auto text-red-500 mb-4" />
+              <p className="text-xl font-medium text-[#2F4156]">{error}</p>
+              <p className="text-[#567C8D] mt-2">Veuillez réessayer ou contacter le support.</p>
+               <button
+                  onClick={fetchConges}
+                  className="mt-6 px-4 py-2 bg-[#567C8D] text-white rounded-lg hover:bg-[#4A6582] transition-colors text-sm font-medium"
+              >
+                  Réessayer
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-[#C8D9E6]/30">
+                  <tr>
+                    <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Date de début</th>
+                    <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Date de fin</th>
+                    <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider hidden md:table-cell">Motif</th>
+                    <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#C8D9E6]/70">
+                  {conges.length === 0 && !isLoading ? (
+                    <tr>
+                      <td colSpan="4" className="px-4 py-12 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <FaRegCalendarAlt size={36} className="mx-auto text-[#C8D9E6] mb-3" />
+                          <p className="text-lg font-medium text-[#2F4156]">Aucune demande de congé.</p>
+                          <p className="text-sm text-[#567C8D]">Commencez par faire une nouvelle demande.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    conges.map((conge) => (
+                      <tr key={conge.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150">
+                        <td className="py-3 px-4 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(conge.date_debut)}</td>
+                        <td className="py-3 px-4 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(conge.date_fin)}</td>
+                        <td className="py-3 px-4 text-sm text-[#567C8D] hidden md:table-cell truncate max-w-xs" title={conge.motif || ''}>
+                          {conge.motif || <span className="italic text-gray-400">Aucun</span>}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap text-sm">{getStatusBadge(conge.statut)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-         <footer className="text-center py-3 border-t border-[#C8D9E6] bg-[#F5EFEB]/80 text-xs text-[#567C8D]">
+      </main>
+
+       <div className="border-t border-[#C8D9E6] bg-[#F5EFEB]/80">
+         <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-center text-xs text-[#567C8D]">
             Système de Gestion des Congés © {new Date().getFullYear()}
         </footer>
       </div>

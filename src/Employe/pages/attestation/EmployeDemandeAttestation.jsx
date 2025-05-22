@@ -3,12 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { 
     FaPlusCircle, FaTrashAlt, FaSearch, FaChevronDown, FaQuestionCircle, FaSpinner, 
     FaPaperPlane, FaFilePdf, FaSync, FaTimes, FaCheckSquare, FaTimesCircle, 
-    FaFilter, FaExclamationTriangle // Added FaExclamationTriangle for Notification
+    FaFilter, FaExclamationTriangle // Added FaFilter just in case, FaExclamationTriangle for Notification
 } from 'react-icons/fa'; 
-// Keep Lucide icons if specific or preferred, e.g., for status display if Fa isn't better
-import { Loader as LucideLoaderIcon } from 'lucide-react'; // Renamed to avoid conflict with our Loader status icon
+// Lucide icon removed as FaSpinner is used for loading
 
-// --- Themed Notification Component (defined above) ---
+// --- Themed Notification Component ---
 const Notification = ({ show, message, type, onDismiss }) => {
   if (!show && !message) return null; 
   const visibilityClasses = show ? 'translate-y-0 opacity-100' : '-translate-y-16 opacity-0 pointer-events-none';
@@ -34,10 +33,11 @@ const Notification = ({ show, message, type, onDismiss }) => {
   );
 };
 
-// --- Themed SkeletonLoader Component (defined above) ---
+// --- Themed SkeletonLoader Component ---
 const SkeletonLoader = ({ rows = 3, cols = 5 }) => (
   <div className="animate-pulse p-4">
     {[...Array(rows)].map((_, i) => (
+      // Adjusted grid-cols to match number of data columns + action column
       <div key={i} className={`grid grid-cols-${cols + 1} gap-4 py-3.5 border-b border-[#C8D9E6]/40 items-center`}>
         {[...Array(cols)].map((_, j) => (
           <div key={j} className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>
@@ -48,14 +48,14 @@ const SkeletonLoader = ({ rows = 3, cols = 5 }) => (
   </div>
 );
 
-// --- SlideDown Component (defined above) ---
+// --- SlideDown Component ---
 const SlideDown = ({ isVisible, children }) => (
     <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isVisible ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
       {isVisible && <div className="pt-2 pb-6">{children}</div>}
     </div>
   );
 
-// --- Status Configuration (using Fa icons for consistency) ---
+// --- Status Configuration ---
 const STATUS_OPTIONS_DISPLAY = [
   { value: 'en attente', label: 'En Attente', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: <FaSpinner size={14} className="mr-1.5 animate-spin" /> },
   { value: 'acceptee', label: 'Acceptée', color: 'bg-green-100 text-green-700 border-green-300', icon: <FaCheckSquare size={14} className="mr-1.5" /> },
@@ -91,12 +91,10 @@ export default function EmployeDemandeAttestation() {
   });
 
   const MY_DEMANDES_API_URL = 'http://localhost:8000/api/employe/mes-demandes';
-  const ATTESTATION_TYPES_API_URL = 'http://localhost:8000/api/employe/attestations';
-  const DEMANDE_API_URL = 'http://localhost:8000/api/employe/attestations';
+  const ATTESTATION_TYPES_API_URL = 'http://localhost:8000/api/employe/attestations'; // This seems to be for GET types and POST new demande
+  // const DEMANDE_API_URL = 'http://localhost:8000/api/employe/attestations'; // Already defined above
 
   const getToken = () => localStorage.getItem('employe_token');
-  // CSRF token might not be needed if using Bearer token and API routes are stateless
-  // const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
   const showAppNotification = (message, type = 'success') => {
     setNotificationState({ show: true, message, type });
@@ -126,13 +124,16 @@ export default function EmployeDemandeAttestation() {
   };
 
   const fetchAttestationTypes = async () => {
+    // Could add a specific loading state for types if it's slow and blocks form
     try {
-      const response = await fetch(ATTESTATION_TYPES_API_URL, {
+      const response = await fetch(ATTESTATION_TYPES_API_URL, { // Assuming this endpoint provides types on GET
         headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept': 'application/json' },
       });
       if (!response.ok) throw new Error('Erreur de chargement des types d\'attestation.');
       const data = await response.json();
-      setAttestationTypes(Array.isArray(data) ? data : []);
+      // Adapt based on how your API returns types.
+      // If /api/employe/attestations on GET returns types:
+      setAttestationTypes(Array.isArray(data) ? data : (Array.isArray(data.types) ? data.types : []));
     } catch (err) {
       showAppNotification(err.message || 'Impossible de charger les types d\'attestation.', 'error');
       setAttestationTypes([]);
@@ -151,14 +152,14 @@ export default function EmployeDemandeAttestation() {
 
   const resetForm = () => {
     setFormData({ type_id: '', date_livraison: '' });
-    setShowForm(false); // Hide immediately, animation handled by SlideDown
+    setShowForm(false);
   };
 
   const toggleForm = () => {
     if (showForm) {
       resetForm();
     } else {
-      if (attestationTypes.length === 0) fetchAttestationTypes(); // Ensure types are loaded
+      if (attestationTypes.length === 0) fetchAttestationTypes();
       setShowForm(true);
     }
   };
@@ -171,7 +172,7 @@ export default function EmployeDemandeAttestation() {
     }
     setIsSubmitting(true);
     try {
-      const response = await fetch(DEMANDE_API_URL, {
+      const response = await fetch(ATTESTATION_TYPES_API_URL, { // POST to the same endpoint for attestations
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${getToken()}`,
@@ -196,14 +197,17 @@ export default function EmployeDemandeAttestation() {
 
   const handleDeleteDemande = async (demandeId) => {
     if (!window.confirm('Êtes-vous sûr de vouloir annuler cette demande?')) return;
-    setIsSubmitting(true); // Use general submitting for delete button too
+    setIsSubmitting(true); 
     try {
-      const response = await fetch(`${DEMANDE_API_URL}/${demandeId}`, {
+      // Assuming DELETE request for a specific demande goes to /api/employe/mes-demandes/{id}
+      // or /api/employe/attestations/{id} - adjust API URL if needed.
+      // Using MY_DEMANDES_API_URL for consistency with how they are fetched.
+      const response = await fetch(`${MY_DEMANDES_API_URL}/${demandeId}`, { 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept': 'application/json' },
       });
-      const responseData = await response.json().catch(() => null); // DELETE might not return JSON
-      if (!response.ok && response.status !== 204) { // 204 is success for DELETE
+      const responseData = await response.json().catch(() => null);
+      if (!response.ok && response.status !== 204) { 
         throw new Error(responseData?.message || responseData?.error || 'Erreur de suppression.');
       }
       showAppNotification(responseData?.message || 'Demande annulée avec succès.', 'success');
@@ -231,7 +235,7 @@ export default function EmployeDemandeAttestation() {
       return (
         demande.attestation_type?.type?.toLowerCase().includes(searchTermLower) ||
         demande.statut?.toLowerCase().includes(searchTermLower) ||
-        demande.date_demande?.includes(searchTermLower) ||
+        demande.date_demande?.includes(searchTermLower) || // Assuming date format includes searchable parts
         demande.date_livraison?.includes(searchTermLower)
       );
     })
@@ -252,7 +256,7 @@ export default function EmployeDemandeAttestation() {
     { label: 'Date Demande', field: 'date_demande' },
     { label: 'Livraison Souhaitée', field: 'date_livraison' },
     { label: 'Statut', field: 'statut' },
-    { label: 'Document', field: 'pdf_path' }, // Assuming 'pdf_path' from backend
+    { label: 'Document', field: 'pdf_path' },
   ];
 
   const formatDate = (dateString) => {
@@ -260,23 +264,35 @@ export default function EmployeDemandeAttestation() {
     return new Date(dateString).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
   };
   
-  // --- Admin-theme CSS classes ---
   const inputClasses = "w-full p-2.5 border border-[#C8D9E6] rounded-md focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] transition-colors outline-none text-[#2F4156] bg-white text-sm";
   const selectClasses = `${inputClasses} appearance-none`;
   const buttonPrimaryClasses = "flex items-center justify-center px-4 py-2 bg-[#567C8D] text-white text-sm font-semibold rounded-md shadow-sm hover:bg-[#4A6582] transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed";
   const buttonSecondaryClasses = "flex items-center justify-center px-4 py-2 bg-[#E2E8F0] hover:bg-[#CBD5E1] text-[#2F4156] text-sm font-medium rounded-md transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed";
 
+  if (!getToken()) {
+      return (
+            <div className="min-h-screen bg-[#F5EFEB] flex items-center justify-center p-4 md:p-6">
+                <Notification show={notification.show} message={notification.message} type={notification.type} onDismiss={() => setNotificationState(p => ({...p, show: false}))} />
+                <div className="p-8 text-center text-red-600 bg-red-100 border border-red-300 rounded-lg shadow-md max-w-md w-full">
+                    <FaExclamationTriangle size={32} className="mx-auto mb-3 text-red-500" />
+                    <h2 className="text-xl font-semibold mb-2">Accès Refusé</h2>
+                    <p className="text-sm">Token employé non trouvé. Veuillez vous reconnecter pour accéder à cette page.</p>
+                </div>
+            </div>
+      );
+  }
 
   return (
-    <div className="min-h-screen bg-[#F5EFEB] p-4 md:p-6">
+    <div className="min-h-screen bg-[#F5EFEB]">
       <Notification show={notification.show} message={notification.message} type={notification.type} onDismiss={() => setNotificationState(p => ({...p, show: false}))} />
 
-      <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-        <header className="bg-[#F5EFEB]/80 text-[#2F4156] px-6 py-4 border-b border-[#C8D9E6]">
-          <h1 className="text-2xl font-bold tracking-tight">Mes Demandes d'Attestation</h1>
+      <div className="bg-[#F5EFEB]/80 border-b border-[#C8D9E6] shadow-sm">
+        <header className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6">
+          <h1 className="text-2xl font-bold tracking-tight text-[#2F4156]">Mes Demandes d'Attestation</h1>
         </header>
+      </div>
 
-        <div className="p-6">
+      <main className="max-w-5xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <div className="relative w-full sm:w-auto sm:flex-grow max-w-xs">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -289,8 +305,8 @@ export default function EmployeDemandeAttestation() {
               />
             </div>
             <div className="flex gap-3 w-full sm:w-auto">
-              <button onClick={fetchMyDemandes} disabled={isLoading} className={buttonSecondaryClasses}>
-                <FaSync size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} /> Actualiser
+              <button onClick={fetchMyDemandes} disabled={isLoading || isSubmitting} className={buttonSecondaryClasses}>
+                <FaSync size={16} className={`mr-2 ${isLoading && !isSubmitting ? 'animate-spin' : ''}`} /> Actualiser
               </button>
               <button onClick={toggleForm} className={`${showForm ? 'bg-red-500 hover:bg-red-600' : 'bg-[#567C8D] hover:bg-[#4A6582]'} text-white text-sm font-semibold px-4 py-2 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center w-full sm:w-auto`} disabled={isSubmitting}>
                 {showForm ? <FaTimes size={16} className="mr-2" /> : <FaPlusCircle size={16} className="mr-2" />}
@@ -318,7 +334,8 @@ export default function EmployeDemandeAttestation() {
                         <FaChevronDown className="h-4 w-4 text-[#A0B9CD]" />
                     </div>
                   </div>
-                  {attestationTypes.length === 0 && <p className="text-xs text-red-500 mt-1">Chargement des types...</p>}
+                  {attestationTypes.length === 0 && !isLoading && <p className="text-xs text-red-500 mt-1">Aucun type d'attestation disponible.</p>}
+                  {attestationTypes.length === 0 && isLoading && <p className="text-xs text-yellow-600 mt-1">Chargement des types...</p>}
                 </div>
                 <div>
                   <label htmlFor="date_livraison" className="block text-sm font-medium text-[#567C8D] mb-1">Date de Livraison Souhaitée <span className="text-red-500">*</span></label>
@@ -347,7 +364,12 @@ export default function EmployeDemandeAttestation() {
               <div className="p-10 text-center flex flex-col items-center">
                 <FaSearch size={40} className="mx-auto text-[#A0B9CD] mb-4" />
                 <p className="text-xl font-medium text-[#2F4156]">Aucune demande trouvée.</p>
-                <p className="text-[#567C8D] mt-2">Essayez d'ajuster vos filtres ou de faire une nouvelle demande.</p>
+                <p className="text-[#567C8D] mt-2">
+                    {searchTerm ? "Essayez d'ajuster vos filtres ou " : "Vous n'avez pas encore fait de demande. "}
+                    <button onClick={toggleForm} className="text-[#567C8D] hover:text-[#2F4156] underline font-medium">
+                        Faire une nouvelle demande
+                    </button>.
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -382,19 +404,22 @@ export default function EmployeDemandeAttestation() {
                               {statusDetails.label}
                             </span>
                           </td>
-                          <td className="py-3 px-4 whitespace-nowrap text-sm">
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-center">
                             {currentPdfUrl ? (
-                              <a href={currentPdfUrl} target="_blank" rel="noopener noreferrer" className="text-[#567C8D] hover:text-[#2F4156] hover:underline inline-flex items-center">
-                                <FaFilePdf size={16} className="mr-1.5" /> Voir
+                              <a href={currentPdfUrl} target="_blank" rel="noopener noreferrer" className="text-[#567C8D] hover:text-[#2F4156] hover:underline inline-flex items-center justify-center p-1 hover:bg-slate-100 rounded-md" title="Voir le PDF">
+                                <FaFilePdf size={18} />
                               </a>
                             ) : (<span className="text-gray-400 italic">-</span>)}
                           </td>
                           <td className="py-3 px-4 text-center">
-                            {(demande.statut === 'en attente' || demande.statut === null /* Treat null as en attente for deletion */) ? (
+                            {(demande.statut === 'en attente' || demande.statut === null) && (
                               <button onClick={() => handleDeleteDemande(demande.id)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-md transition-colors" title="Annuler la Demande" disabled={isSubmitting}>
                                 {isSubmitting ? <FaSpinner className="animate-spin" size={16}/> : <FaTrashAlt size={16} />}
                               </button>
-                            ) : (<span className="text-xs text-gray-400 italic">Traité</span>)}
+                            )}
+                            {demande.statut !== 'en attente' && demande.statut !== null && (
+                                <span className="text-xs text-gray-400 italic">Traité</span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -404,11 +429,12 @@ export default function EmployeDemandeAttestation() {
               </div>
             )}
           </div>
+        </main>
+        <div className="border-t border-[#C8D9E6] bg-[#F5EFEB]/80">
+          <footer className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-center text-xs text-[#567C8D]">
+              Gestion des Attestations © {new Date().getFullYear()}
+          </footer>
         </div>
-        <footer className="text-center py-3 border-t border-[#C8D9E6] bg-[#F5EFEB]/80 text-xs text-[#567C8D]">
-            Gestion des Attestations © {new Date().getFullYear()}
-        </footer>
       </div>
-    </div>
   );
 }

@@ -3,9 +3,8 @@ import {
     FaPlus, FaEdit, FaTrashAlt, FaTimesCircle, FaCheckCircle, 
     FaExclamationTriangle, FaSpinner, FaSync, FaSave, FaBoxOpen 
 } from 'react-icons/fa';
-// import { Loader2 } from 'lucide-react'; // Replaced with FaSpinner
 
-// --- Themed Notification Component (defined above or imported) ---
+// --- Themed Notification Component ---
 const Notification = ({ show, message, type, onDismiss }) => {
   if (!show && !message) return null; 
   const visibilityClasses = show ? 'translate-y-0 opacity-100' : '-translate-y-16 opacity-0 pointer-events-none';
@@ -25,13 +24,13 @@ const Notification = ({ show, message, type, onDismiss }) => {
         <span className="text-sm font-medium">{message}</span>
       </div>
       <button onClick={onDismiss} className="ml-4 text-current hover:opacity-75">
-        <FaTimesCircle size={18} />
+        <FaTimesCircle size={18} /> {/* Changed from FaTimes to FaTimesCircle for consistency with icon theme */}
       </button>
     </div>
   );
 };
 
-// --- SlideDown Component (Simple version for consistency) ---
+// --- SlideDown Component ---
 const SlideDown = ({ isVisible, children }) => (
     <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isVisible ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
       {isVisible && <div className="pt-2 pb-6">{children}</div>}
@@ -41,9 +40,9 @@ const SlideDown = ({ isVisible, children }) => (
 
 export default function MaterialEmploye() {
   const [materials, setMaterials] = useState([]);
-  const [loading, setLoading] = useState(true); // For table data
-  const [formLoading, setFormLoading] = useState(false); // For form submission
-  const [deleteLoadingId, setDeleteLoadingId] = useState(null); // For specific delete button
+  const [loading, setLoading] = useState(true);
+  const [formLoading, setFormLoading] = useState(false);
+  const [deleteLoadingId, setDeleteLoadingId] = useState(null);
 
   const [notification, setNotificationState] = useState({ show: false, message: '', type: '' });
   
@@ -94,7 +93,7 @@ export default function MaterialEmploye() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'quantite' ? Math.max(1, parseInt(value) || 1) : value // Ensure quantite is at least 1
+      [name]: name === 'quantite' ? Math.max(1, parseInt(value) || 1) : value
     }));
   };
 
@@ -122,7 +121,7 @@ export default function MaterialEmploye() {
       if (!response.ok) throw new Error(responseData.message || `Échec de ${editMode ? 'mise à jour' : 'création'}.`);
       
       showAppNotification(responseData.message || `Demande ${editMode ? 'mise à jour' : 'créée'} avec succès!`, 'success');
-      fetchMaterials(); // Refresh the list
+      fetchMaterials(); 
       resetForm();
     } catch (err) {
       showAppNotification(err.message, 'error');
@@ -139,7 +138,6 @@ export default function MaterialEmploye() {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('employe_token')}`, 'Accept': 'application/json' }
       });
-      // DELETE might return 204 No Content or JSON
       let responseData = {};
       if (response.status !== 204) {
           responseData = await response.json();
@@ -179,12 +177,12 @@ export default function MaterialEmploye() {
         resetForm();
     } else {
         setShowForm(true);
+         window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top when opening form
     }
   };
   
-  // Admin-themed status badge
   const StatusBadge = ({ status }) => {
-    let style = { label: status, colorClasses: 'bg-gray-100 text-gray-700 border-gray-300' }; // Default
+    let style = { label: status, colorClasses: 'bg-gray-100 text-gray-700 border-gray-300' }; 
     switch (status?.toLowerCase()) {
       case 'en_attente':
         style = { label: "En attente", colorClasses: "bg-yellow-100 text-yellow-700 border-yellow-300" };
@@ -192,7 +190,7 @@ export default function MaterialEmploye() {
       case 'approuve':
         style = { label: "Approuvé", colorClasses: "bg-green-100 text-green-700 border-green-300" };
         break;
-      case 'rejete':
+      case 'rejete': // Assuming 'rejete' as a possible status
         style = { label: "Rejeté", colorClasses: "bg-red-100 text-red-700 border-red-300" };
         break;
     }
@@ -203,14 +201,13 @@ export default function MaterialEmploye() {
     );
   };
 
-  // --- Admin-theme CSS classes ---
   const inputClasses = "w-full p-2.5 border border-[#C8D9E6] rounded-md focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] transition-colors outline-none text-[#2F4156] bg-white text-sm";
   const buttonPrimaryClasses = "flex items-center justify-center px-4 py-2 bg-[#567C8D] text-white text-sm font-semibold rounded-md shadow-sm hover:bg-[#4A6582] transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed";
   const buttonSecondaryClasses = "flex items-center justify-center px-4 py-2 bg-[#E2E8F0] hover:bg-[#CBD5E1] text-[#2F4156] text-sm font-medium rounded-md transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed";
 
 
   return (
-    <div className="min-h-screen bg-[#F5EFEB] p-4 md:p-6">
+    <div className="min-h-screen bg-[#F5EFEB]"> {/* Removed p-4 md:p-6 */}
       <Notification 
         show={notification.show} 
         message={notification.message} 
@@ -218,14 +215,15 @@ export default function MaterialEmploye() {
         onDismiss={() => setNotificationState(prev => ({ ...prev, show: false }))} 
       />
 
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-        <header className="bg-[#F5EFEB]/80 text-[#2F4156] px-6 py-4 border-b border-[#C8D9E6]">
-          <h1 className="text-2xl font-bold tracking-tight">Mes Demandes de Matériel</h1>
+      <div className="bg-[#F5EFEB]/80 border-b border-[#C8D9E6] shadow-sm">
+        <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6">
+          <h1 className="text-2xl font-bold tracking-tight text-[#2F4156]">Mes Demandes de Matériel</h1>
         </header>
+      </div>
 
-        <div className="p-6">
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row justify-end items-center mb-6 gap-3">
-            <button onClick={fetchMaterials} disabled={loading} className={buttonSecondaryClasses}>
+            <button onClick={fetchMaterials} disabled={loading || formLoading} className={buttonSecondaryClasses}>
               <FaSync size={16} className={`mr-2 ${loading && !formLoading ? 'animate-spin' : ''}`} /> Actualiser
             </button>
             <button onClick={toggleForm} className={`${showForm ? 'bg-red-500 hover:bg-red-600' : 'bg-[#567C8D] hover:bg-[#4A6582]'} text-white text-sm font-semibold px-4 py-2 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center w-full sm:w-auto`} disabled={formLoading}>
@@ -235,7 +233,7 @@ export default function MaterialEmploye() {
           </div>
 
           <SlideDown isVisible={showForm}>
-            <div className="bg-slate-50 border border-slate-200 rounded-lg shadow-inner p-6 mb-6">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg shadow-inner p-6 mb-6"> {/* Consider if mb-6 is needed given SlideDown py-6 */}
               <h3 className="text-xl font-semibold text-[#2F4156] border-b border-[#C8D9E6] pb-3 mb-6 flex items-center">
                 {editMode ? <FaEdit size={18} className="mr-2 text-[#567C8D]" /> : <FaPlus size={18} className="mr-2 text-[#567C8D]" />}
                 {editMode ? 'Modifier la demande' : 'Nouvelle demande de matériel'}
@@ -268,13 +266,12 @@ export default function MaterialEmploye() {
             </div>
           </SlideDown>
 
-          {/* Materials Table */}
           <div className="bg-white border border-[#C8D9E6] rounded-lg shadow-md overflow-hidden">
              <div className="border-b border-[#C8D9E6] bg-[#F5EFEB]/80 px-4 py-3.5">
                 <h2 className="text-lg font-semibold text-[#2F4156]">Historique des Demandes</h2>
             </div>
             {loading && materials.length === 0 ? (
-                 <div className="p-4 animate-pulse"> {/* Simple Skeleton */}
+                 <div className="p-4 animate-pulse">
                     {[...Array(3)].map((_, i) => (
                         <div key={i} className="grid grid-cols-5 gap-4 py-3.5 border-b border-[#C8D9E6]/40 items-center">
                         {[...Array(4)].map((_,j) => <div key={j} className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>)}
@@ -312,10 +309,10 @@ export default function MaterialEmploye() {
                         <td className="py-3 px-4 whitespace-nowrap text-sm text-center">
                           {material.statut === 'en_attente' ? (
                             <div className="flex justify-center items-center gap-2">
-                              <button onClick={() => handleEdit(material)} className="text-[#567C8D] hover:text-[#2F4156] p-1.5 hover:bg-[#E2E8F0] rounded-md transition-colors" title="Modifier">
+                              <button onClick={() => handleEdit(material)} className="text-[#567C8D] hover:text-[#2F4156] p-1.5 hover:bg-[#E2E8F0] rounded-md transition-colors" title="Modifier" disabled={formLoading || deleteLoadingId !== null}>
                                 <FaEdit size={16} />
                               </button>
-                              <button onClick={() => handleDelete(material.id)} disabled={deleteLoadingId === material.id} className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-100 rounded-md transition-colors" title="Supprimer">
+                              <button onClick={() => handleDelete(material.id)} disabled={deleteLoadingId === material.id || formLoading} className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-100 rounded-md transition-colors" title="Supprimer">
                                 {deleteLoadingId === material.id ? <FaSpinner size={16} className="animate-spin" /> : <FaTrashAlt size={16} />}
                               </button>
                             </div>
@@ -328,8 +325,10 @@ export default function MaterialEmploye() {
               </div>
             )}
           </div>
-        </div>
-        <footer className="text-center py-3 border-t border-[#C8D9E6] bg-[#F5EFEB]/80 text-xs text-[#567C8D]">
+      </main>
+
+      <div className="border-t border-[#C8D9E6] bg-[#F5EFEB]/80">
+        <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-center text-xs text-[#567C8D]">
             Gestion des Demandes de Matériel © {new Date().getFullYear()}
         </footer>
       </div>
