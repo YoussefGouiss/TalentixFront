@@ -4,17 +4,18 @@ import {
   FaCheck, FaTimes
 } from 'react-icons/fa';
 
-// Re-usable animated components themed like Employee.jsx
+// Re-usable animated components
 
 const Notification = ({ show, message, type, onDismiss }) => {
+  if (!show && !message) return null; // Added this line to prevent rendering if no message
   return (
     <div
-      className={`fixed top-5 right-5 z-[100] p-4 rounded-lg shadow-xl transform transition-all duration-500 ease-in-out
+      className={`fixed top-5 right-5 z-[1000] p-4 rounded-lg shadow-xl transform transition-all duration-500 ease-in-out
                   ${show ? 'translate-y-0 opacity-100' : '-translate-y-16 opacity-0 pointer-events-none'}
                   ${type === 'success' ? 'bg-green-500 text-white border-l-4 border-green-700' : ''}
                   ${type === 'error' ? 'bg-red-500 text-white border-l-4 border-red-700' : ''}
                   ${type === 'warning' ? 'bg-yellow-400 text-yellow-800 border-l-4 border-yellow-600' : ''}
-                  flex items-center justify-between`}
+                  flex items-center justify-between min-w-[300px]`} // Added min-w
     >
       <div className="flex items-center">
         {type === 'success' && <FaCheckCircle size={20} className="mr-3 flex-shrink-0" />}
@@ -33,12 +34,12 @@ const SkeletonLoader = ({ rows = 5 }) => (
   <div className="animate-pulse p-4">
     {[...Array(rows)].map((_, i) => (
       <div key={i} className={`grid grid-cols-5 md:grid-cols-6 gap-4 py-3.5 border-b border-[#C8D9E6]/40 items-center`}>
-        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>
-        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>
-        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>
-        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1 hidden md:block"></div>
-        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>
-        <div className="h-8 bg-[#C8D9E6]/70 rounded w-full col-span-1 flex gap-2 p-1">
+        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div> {/* Employe */}
+        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div> {/* Début */}
+        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div> {/* Fin */}
+        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1 hidden md:block"></div> {/* Motif */}
+        <div className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div> {/* Statut */}
+        <div className="h-8 bg-[#C8D9E6]/70 rounded w-full col-span-1 flex gap-2 p-1"> {/* Actions */}
             <div className="h-full bg-[#A0B9CD]/80 rounded w-1/2"></div>
             <div className="h-full bg-[#A0B9CD]/80 rounded w-1/2"></div>
         </div>
@@ -48,11 +49,11 @@ const SkeletonLoader = ({ rows = 5 }) => (
 );
 
 
-const Modal = ({ isOpen, onClose, title, children }) => {
+const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }) => { // Added maxWidth prop
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white border border-[#C8D9E6] rounded-xl shadow-lg w-full max-w-md p-6 transform transition-all">
+      <div className={`bg-white border border-[#C8D9E6] rounded-xl shadow-lg w-full ${maxWidth} p-6 transform transition-all max-h-[90vh] overflow-y-auto`}> {/* Added max-h and overflow */}
         <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#C8D9E6]">
           <h3 className="text-xl font-semibold text-[#2F4156]">{title}</h3>
           <button onClick={onClose} className="text-[#567C8D] hover:text-[#2F4156]">
@@ -147,7 +148,7 @@ export default function Conges() {
     } else if (newStatus === 'rejete' && !explication) {
       showAppNotification('Une explication est requise pour un refus.', 'warning');
       setIsSubmittingAction(false);
-      setCurrentCongeForAction(null);
+      // Do not clear currentCongeForAction here to keep modal open
       return;
     }
 
@@ -169,7 +170,7 @@ export default function Conges() {
       }
 
       showAppNotification(responseData.message || 'Statut mis à jour avec succès.', 'success');
-      fetchAdminConges();
+      fetchAdminConges(); // Refresh list
       if (newStatus === 'rejete') {
         setShowRejectionModal(false);
         setRejectionReason('');
@@ -178,7 +179,9 @@ export default function Conges() {
       showAppNotification(err.message, 'error');
     } finally {
       setIsSubmittingAction(false);
-      setCurrentCongeForAction(null);
+      if (newStatus !== 'rejete' || (newStatus === 'rejete' && explication) ) { // Clear only if not a failed rejection due to missing reason
+         setCurrentCongeForAction(null);
+      }
     }
   };
 
@@ -190,7 +193,7 @@ export default function Conges() {
   const handleSubmitRejection = () => {
     if (!rejectionReason.trim()) {
       showAppNotification('Veuillez fournir une explication pour le refus.', 'warning');
-      return;
+      return; // Keep modal open
     }
     if (currentCongeForAction) {
       handleStatusUpdate(currentCongeForAction.id, 'rejete', rejectionReason);
@@ -220,17 +223,17 @@ export default function Conges() {
   const filteredConges = conges.filter(conge => {
     if (filterStatus === 'all') return true;
     return conge.statut === filterStatus;
-  }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)); // Sort by most recent
 
   const getEmployeeDisplay = (conge) => {
     if (conge.employe && conge.employe.nom) {
         return `${conge.employe.nom} ${conge.employe.prenom || ''}`;
     }
-    return `Employé ID: ${conge.employe_id}`;
+    return conge.employe_id ? `Employé ID: ${conge.employe_id}` : 'Employé inconnu';
   };
 
   return (
-    <>
+    <div className="min-h-screen bg-[#F5EFEB]"> {/* Full page background */}
       <Notification 
         show={notification.show} 
         message={notification.message} 
@@ -238,20 +241,22 @@ export default function Conges() {
         onDismiss={() => setNotification(prev => ({ ...prev, show: false }))} 
       />
 
-      <div className="max-w-6xl mx-auto my-4 md:my-6 bg-white rounded-xl shadow-lg overflow-hidden">
-        <header className="bg-[#F5EFEB]/80 text-[#2F4156] px-6 py-4 border-b border-[#C8D9E6]">
-          <h1 className="text-2xl font-bold tracking-tight">Validation des Demandes de Congé</h1>
+      <div className="bg-[#F5EFEB]/80 border-b border-[#C8D9E6] shadow-sm">
+        <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6">
+          <h1 className="text-2xl font-bold tracking-tight text-[#2F4156]">Validation des Demandes de Congé</h1>
         </header>
+      </div>
         
-        <div className="p-6">
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8"> {/* Main content container */}
           <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <h2 className="text-xl font-semibold text-[#2F4156]">Liste des Demandes</h2>
-            <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-[#C8D9E6] shadow-sm">
+            {/* Title removed as it's in the header now */}
+            {/* Filters */}
+            <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-[#C8D9E6] shadow-sm ml-auto"> {/* Moved filter to right */}
               <FaFilter size={18} className="text-[#567C8D]" />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="bg-transparent text-[#2F4156] font-medium focus:outline-none p-1.5 rounded-md border-transparent focus:border-[#567C8D] focus:ring-0"
+                className="bg-transparent text-[#2F4156] font-medium focus:outline-none p-1.5 rounded-md border-transparent focus:border-[#567C8D] focus:ring-0 text-sm" // Added text-sm
               >
                 <option value="all">Tous les statuts</option>
                 <option value="en_attente">En attente</option>
@@ -262,6 +267,9 @@ export default function Conges() {
           </div>
           
           <div className="bg-white border border-[#C8D9E6] rounded-lg shadow-md overflow-hidden">
+            <div className="border-b border-[#C8D9E6] bg-[#F5EFEB]/80 px-4 py-3.5">
+                <h2 className="text-lg font-semibold text-[#2F4156]">Liste des Demandes</h2>
+            </div>
             {isLoading ? (
               <div className="p-1"><SkeletonLoader rows={5} /></div>
             ) : error && !filteredConges.length ? (
@@ -296,17 +304,17 @@ export default function Conges() {
                           <div className="flex flex-col items-center justify-center">
                             <FaEye size={36} className="mx-auto text-[#C8D9E6] mb-3" />
                             <p className="text-lg font-medium text-[#2F4156]">Aucune demande</p>
-                            <p className="text-sm text-[#567C8D]">Aucune demande ne correspond à ce filtre.</p>
+                            <p className="text-sm text-[#567C8D]">Aucune demande ne correspond à "{filterStatus === 'all' ? 'tous les statuts' : filterStatus}".</p>
                           </div>
                         </td>
                       </tr>
                     ) : (
                       filteredConges.map((conge) => (
                         <tr key={conge.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150">
-                          <td className="py-3 px-4 whitespace-nowrap text-sm font-medium text-[#2F4156]">{getEmployeeDisplay(conge)}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm font-medium text-[#2F4156]" title={getEmployeeDisplay(conge)}>{getEmployeeDisplay(conge)}</td>
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(conge.date_debut)}</td>
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(conge.date_fin)}</td>
-                          <td className="py-3 px-4 text-sm text-[#567C8D] hidden md:table-cell truncate max-w-xs" title={conge.motif || ''}>{conge.motif || <span className="italic text-gray-400">Aucun</span>}</td>
+                          <td className="py-3 px-4 text-sm text-[#567C8D] hidden md:table-cell truncate max-w-sm" title={conge.motif || ''}>{conge.motif || <span className="italic text-gray-400">Aucun</span>}</td>
                           <td className="py-3 px-4 whitespace-nowrap text-sm">{getStatusBadge(conge.statut)}</td>
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-center">
                             {conge.statut === 'en_attente' ? (
@@ -331,8 +339,8 @@ export default function Conges() {
                                 </button>
                               </div>
                             ) : conge.statut === 'rejete' && conge.explication ? (
-                                <p className="text-xs text-[#567C8D] italic px-2" title={conge.explication}>
-                                    Refus: {conge.explication.substring(0,25)}{conge.explication.length > 25 && '...'}
+                                <p className="text-xs text-[#567C8D] italic px-2 truncate max-w-[150px] sm:max-w-[200px]" title={`Motif du rejet: ${conge.explication}`}>
+                                    {conge.explication}
                                 </p>
                             ) : (
                                 <span className="text-xs text-[#A0AEC0] italic">Traité</span>
@@ -346,8 +354,9 @@ export default function Conges() {
               </div>
             )}
           </div>
-        </div>
-        <footer className="text-center py-3 border-t border-[#C8D9E6] bg-[#F5EFEB]/80 text-xs text-[#567C8D]">
+      </main>
+      <div className="border-t border-[#C8D9E6] bg-[#F5EFEB]/80">
+        <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-center text-xs text-[#567C8D]">
             Interface Administrateur © {new Date().getFullYear()}
         </footer>
       </div>
@@ -356,6 +365,7 @@ export default function Conges() {
         isOpen={showRejectionModal} 
         onClose={() => { setShowRejectionModal(false); setRejectionReason(''); setCurrentCongeForAction(null); }}
         title="Motif du Rejet"
+        maxWidth="max-w-lg" // Slightly wider modal for textarea
       >
         <div className="space-y-4">
           <p className="text-sm text-[#567C8D]">
@@ -397,6 +407,6 @@ export default function Conges() {
           </div>
         </div>
       </Modal>
-    </>
+    </div>
   );
 }

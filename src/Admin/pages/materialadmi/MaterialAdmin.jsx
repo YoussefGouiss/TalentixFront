@@ -1,42 +1,67 @@
 import { useState, useEffect } from "react";
 import {
   FaSync, FaCheck, FaTimes, FaSpinner, FaEye, FaCheckCircle, FaTimesCircle,
-  FaThumbsDown, FaThumbsUp, FaBoxOpen // Added FaBoxOpen for empty state
+  FaThumbsDown, FaThumbsUp, FaBoxOpen, FaExclamationTriangle // Added FaExclamationTriangle for error notification
 } from "react-icons/fa";
+
+
+// --- Notification Component (Themed) ---
+const Notification = ({ show, message, type, onDismiss }) => {
+  if (!show && !message) return null; 
+  const visibilityClasses = show ? 'translate-y-0 opacity-100' : '-translate-y-16 opacity-0 pointer-events-none';
+  return (
+    <div
+      className={`fixed top-5 right-5 z-[1000] p-4 rounded-lg shadow-xl transform transition-all duration-500 ease-in-out
+                  ${visibilityClasses}
+                  ${type === 'success' ? 'bg-green-500 text-white border-l-4 border-green-700' : ''}
+                  ${type === 'error' ? 'bg-red-500 text-white border-l-4 border-red-700' : ''}
+                  ${type === 'warning' ? 'bg-yellow-400 text-yellow-800 border-l-4 border-yellow-600' : ''}
+                  flex items-center justify-between min-w-[300px]`}
+    >
+      <div className="flex items-center">
+        {type === 'success' && <FaCheckCircle size={20} className="mr-3 flex-shrink-0" />}
+        {type === 'error' && <FaTimesCircle size={20} className="mr-3 flex-shrink-0" />}
+        {type === 'warning' && <FaExclamationTriangle size={20} className="mr-3 flex-shrink-0" />}
+        <span className="text-sm font-medium">{message}</span>
+      </div>
+      <button onClick={onDismiss} className="ml-4 text-current hover:opacity-75">
+        <FaTimes size={18} />
+      </button>
+    </div>
+  );
+};
+
 
 // Main component
 export default function MaterialAdmin() {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [actionLoading, setActionLoading] = useState(null); // Stores ID of item being processed
-  const [actionType, setActionType] = useState(''); // 'approve' or 'reject' for specific spinner
-  const [actionSuccess, setActionSuccess] = useState(null);
+  const [actionLoading, setActionLoading] = useState(null); 
+  const [actionType, setActionType] = useState(''); 
+  
+  const [notification, setNotificationState] = useState({ show: false, message: '', type: '' });
+
   const [showDetailsId, setShowDetailsId] = useState(null);
-  const [showRejectionFormForId, setShowRejectionFormForId] = useState(null); // Store ID for which rejection form is shown
+  const [showRejectionFormForId, setShowRejectionFormForId] = useState(null); 
   const [rejectionReason, setRejectionReason] = useState("");
   
   const API_BASE_URL = 'http://localhost:8000/api/admin/material';
 
-  // Fetch materials on component mount
+  const showAppNotification = (message, type = 'success', duration = 3000) => {
+    setNotificationState({ show: true, message, type });
+    setTimeout(() => {
+      setNotificationState(prev => ({ ...prev, show: false }));
+    }, duration);
+  };
+
   useEffect(() => {
     fetchMaterials();
   }, []);
 
-  // Success message timer
-  useEffect(() => {
-    if (actionSuccess) {
-      const timer = setTimeout(() => {
-        setActionSuccess(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [actionSuccess]);
-
-  // Fetch materials from API
   const fetchMaterials = async () => {
     setLoading(true);
-    setError(null); // Reset error before fetching
+    setError(null); 
     try {
       const response = await fetch(API_BASE_URL, {
         method: 'GET',
@@ -52,25 +77,24 @@ export default function MaterialAdmin() {
         throw new Error(errorData.message || 'Impossible de récupérer les demandes de matériel.');
       }
       const data = await response.json();
-      setMaterials(Array.isArray(data) ? data : []); // Ensure materials is always an array
+      setMaterials(Array.isArray(data) ? data : []); 
       setError(null);
     } catch (err) {
       setError(err.message);
-      setMaterials([]); // Clear materials on error
+      showAppNotification(err.message, 'error');
+      setMaterials([]); 
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle approve/reject
   const handleStatusUpdate = async (id, status) => {
     setActionLoading(id);
     setActionType(status === 'approuve' ? 'approve' : 'reject');
     
     try {
       if (status === 'rejete' && !rejectionReason.trim() && showRejectionFormForId === id) {
-        // Only validate rejection reason if the form was explicitly shown for this item and action
-        alert('Veuillez fournir une justification pour le rejet');
+        showAppNotification('Veuillez fournir une justification pour le rejet.', 'warning');
         setActionLoading(null);
         setActionType('');
         return;
@@ -99,30 +123,23 @@ export default function MaterialAdmin() {
       
       const updatedMaterial = await response.json();
       
-      if (updatedMaterial && updatedMaterial.id) {
-        setMaterials(prevMaterials => prevMaterials.map(material => 
-          material.id === updatedMaterial.id ? updatedMaterial : material
-        ));
-      } else { // Fallback if API doesn't return full item
-        setMaterials(prevMaterials => prevMaterials.map(material => 
-          material.id === id ? { 
-            ...material, 
-            statut: status, 
-            explication: (status === 'rejete' && rejectionReason.trim() && showRejectionFormForId === id) ? rejectionReason.trim() : material.explication 
-          } : material
-        ));
-      }
+      // Update local state optimistically or with response data
+      setMaterials(prevMaterials => prevMaterials.map(material => 
+        material.id === id ? { 
+          ...material, 
+          ...updatedMaterial, // Prefer API response if it's complete
+          statut: status, 
+          explication: (status === 'rejete' && rejectionReason.trim() && showRejectionFormForId === id) ? rejectionReason.trim() : (updatedMaterial.explication || material.explication)
+        } : material
+      ));
       
-      setActionSuccess(`Demande ${status === 'approuve' ? 'approuvée' : 'rejetée'} avec succès!`);
+      showAppNotification(`Demande ${status === 'approuve' ? 'approuvée' : 'rejetée'} avec succès!`, 'success');
       if (status === 'rejete' && showRejectionFormForId === id) {
-          setShowRejectionFormForId(null); // Close rejection form if it was open for this item
+          setShowRejectionFormForId(null); 
           setRejectionReason("");
       }
-       // Optionally close details view after action, or leave it open
-       // setShowDetailsId(null); 
     } catch (err) {
-      console.error("Error updating status:", err);
-      setError(err.message); // Show specific error from API if available
+      showAppNotification(err.message, 'error');
     } finally {
       setActionLoading(null);
       setActionType('');
@@ -132,16 +149,16 @@ export default function MaterialAdmin() {
   const toggleDetails = (id) => {
     const newDetailsId = showDetailsId === id ? null : id;
     setShowDetailsId(newDetailsId);
-    if (newDetailsId !== id || newDetailsId === null) { // If closing or switching
-      setShowRejectionFormForId(null); // Close any open rejection form
+    if (newDetailsId !== id || newDetailsId === null) { 
+      setShowRejectionFormForId(null); 
       setRejectionReason("");
     }
   };
   
   const handleShowRejectionForm = (id) => {
-    setShowDetailsId(id); // Ensure details are open
-    setShowRejectionFormForId(id); // Set which item's rejection form is active
-    setRejectionReason(""); // Clear previous reason
+    setShowDetailsId(id); 
+    setShowRejectionFormForId(id); 
+    setRejectionReason(""); 
   };
 
   const StatusBadge = ({ status }) => {
@@ -162,50 +179,41 @@ export default function MaterialAdmin() {
     }
   };
 
-  // Debug function can remain if useful for development
-  // const logMaterialState = (id) => {
-  //   const material = materials.find(m => m.id === id);
-  //   console.log("Material state:", material);
-  // };
-
   return (
-    <>
-      {/* Success message - Themed */}
-      {actionSuccess && (
-        <div className="fixed top-5 right-5 z-[100] p-4 rounded-lg shadow-xl transform transition-all duration-500 ease-in-out translate-y-0 opacity-100 bg-green-500 text-white border-l-4 border-green-700 flex items-center animate-fade-in">
-          <FaCheckCircle size={20} className="mr-3 flex-shrink-0" />
-          <span className="text-sm font-medium">{actionSuccess}</span>
-        </div>
-      )}
+    <div className="min-h-screen bg-[#F5EFEB]">
+      <Notification 
+        show={notification.show} 
+        message={notification.message} 
+        type={notification.type}
+        onDismiss={() => setNotificationState(prev => ({ ...prev, show: false }))} 
+      />
 
-      <div className="max-w-4xl mx-auto my-4 md:my-6 bg-white rounded-xl shadow-lg overflow-hidden border border-[#C8D9E6]">
-        <header className="bg-[#F5EFEB]/80 text-[#2F4156] px-6 py-4 border-b border-[#C8D9E6] flex justify-between items-center">
-          <h1 className="text-2xl font-bold tracking-tight">Gestion des Demandes de Matériel</h1>
+      <div className="bg-[#F5EFEB]/80 border-b border-[#C8D9E6] shadow-sm">
+        <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 flex justify-between items-center">
+          <h1 className="text-2xl font-bold tracking-tight text-[#2F4156]">Gestion des Demandes de Matériel</h1>
           <button 
             onClick={() => fetchMaterials()}
             className={`flex items-center px-4 py-2 rounded-md transition-colors duration-200 text-sm font-medium
-                        ${loading ? 'bg-[#C8D9E6]/50 text-[#567C8D] cursor-not-allowed' 
+                        ${loading || actionLoading ? 'bg-[#C8D9E6]/50 text-[#567C8D] cursor-not-allowed' 
                                  : 'bg-[#567C8D] hover:bg-[#4A6582] text-white shadow-sm'}`}
-            disabled={loading}
+            disabled={loading || actionLoading}
           >
-            {loading ? 
+            {loading && !actionLoading ? 
               <FaSpinner size={16} className="mr-2 animate-spin" /> : 
               <FaSync size={16} className="mr-2" />
             }
             Actualiser
           </button>
         </header>
+      </div>
 
-        <div className="p-6">
-          {/* Error message - Themed */}
-          {error && !loading && ( // Only show error if not loading, to prevent overlap
-            <div className="bg-red-100 text-red-700 p-3 rounded-md mb-4 flex items-center border border-red-300 shadow-sm">
-              <FaTimesCircle size={18} className="mr-2" />
-              Erreur: {error}
-            </div>
-          )}
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          {/* Error message is now handled by the global Notification component */}
 
           <div className="bg-white border border-[#C8D9E6] rounded-lg shadow-md overflow-hidden">
+            <div className="border-b border-[#C8D9E6] bg-[#F5EFEB]/80 px-4 py-3.5">
+                <h2 className="text-lg font-semibold text-[#2F4156]">Liste des Demandes</h2>
+            </div>
             {loading ? (
               <div className="flex justify-center items-center p-12 bg-white">
                 <div className="flex flex-col items-center">
@@ -213,7 +221,7 @@ export default function MaterialAdmin() {
                   <p className="mt-3 text-[#567C8D]">Chargement des données...</p>
                 </div>
               </div>
-            ) : materials.length === 0 && !error ? ( // Show empty state only if no error
+            ) : materials.length === 0 && !error ? ( 
               <div className="text-center p-12 bg-white">
                 <div className="flex flex-col items-center">
                   <FaBoxOpen size={36} className="text-[#C8D9E6] mb-3" />
@@ -221,6 +229,20 @@ export default function MaterialAdmin() {
                   <p className="text-sm text-[#567C8D]">Il n'y a pas de demandes à afficher pour le moment.</p>
                 </div>
               </div>
+            ) : error && materials.length === 0 ? ( // Specific message if fetch failed and list is empty
+                <div className="text-center p-12 bg-white">
+                    <div className="flex flex-col items-center">
+                        <FaExclamationTriangle size={36} className="text-red-400 mb-3" />
+                        <p className="text-lg font-medium text-[#2F4156]">Erreur de chargement</p>
+                        <p className="text-sm text-[#567C8D]">{error}</p>
+                        <button 
+                            onClick={() => fetchMaterials()}
+                            className="mt-4 px-3 py-1.5 bg-[#567C8D] hover:bg-[#4A6582] text-white rounded-md shadow-sm text-xs font-semibold flex items-center"
+                        >
+                            Réessayer
+                        </button>
+                    </div>
+                </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full">
@@ -231,7 +253,7 @@ export default function MaterialAdmin() {
                           {header}
                         </th>
                       ))}
-                      <th className="py-3 px-4 text-right text-xs font-semibold text-[#2F4156] uppercase tracking-wider">
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-[#2F4156] uppercase tracking-wider"> {/* Centered Actions Header */}
                         Actions
                       </th>
                     </tr>
@@ -240,64 +262,68 @@ export default function MaterialAdmin() {
                     {materials.map((material) => (
                       <>
                         <tr key={material.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150">
-                          <td className="py-3 px-4 whitespace-nowrap text-sm font-medium text-[#2F4156]">{material.employe_nom || 'N/A'}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm font-medium text-[#2F4156]">{material.employe_nom || (material.employe ? `${material.employe.nom} ${material.employe.prenom}`: 'N/A')}</td>
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-[#2F4156]">{material.nom}</td>
-                          <td className="py-3 px-4 text-sm text-[#567C8D] max-w-xs truncate" title={material.motif}>{material.motif}</td>
-                          <td className="py-3 px-4 whitespace-nowrap text-sm text-[#2F4156]">{material.quantite}</td>
+                          <td className="py-3 px-4 text-sm text-[#567C8D] max-w-sm truncate" title={material.motif}>{material.motif}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-center text-[#2F4156]">{material.quantite}</td>
                           <td className="py-3 px-4 whitespace-nowrap"><StatusBadge status={material.statut} /></td>
-                          <td className="py-3 px-4 whitespace-nowrap text-right text-sm">
-                            <div className="flex justify-end items-center gap-2">
+                          <td className="py-3 px-4 whitespace-nowrap text-sm">
+                            <div className="flex justify-center items-center gap-2"> {/* Centered actions */}
                               <button
                                 onClick={() => toggleDetails(material.id)}
-                                className="p-1.5 text-[#567C8D] rounded-md hover:bg-[#567C8D]/20 hover:text-[#2F4156] transition-colors"
-                                title="Voir détails"
+                                className="p-1.5 text-[#567C8D] rounded-md hover:bg-[#567C8D]/10 hover:text-[#2F4156] transition-colors"
+                                title="Voir détails/Actions"
                               > <FaEye size={16} /> </button>
                               
-                              {material.statut === 'en_attente' && (
+                              {material.statut === 'en_attente' && ( // Quick actions only if en_attente and details not open
+                                !showDetailsId && ( // Hide quick actions if details are open for any item
                                 <>
                                   <button
                                     onClick={() => handleStatusUpdate(material.id, 'approuve')}
                                     disabled={actionLoading === material.id}
-                                    className="p-1.5 text-green-600 rounded-md hover:bg-green-500/20 hover:text-green-700 transition-colors"
-                                    title="Approuver"
+                                    className="p-1.5 text-green-600 rounded-md hover:bg-green-500/10 hover:text-green-700 transition-colors"
+                                    title="Approuver Rapidement"
                                   >
                                     {(actionLoading === material.id && actionType === 'approve') ? <FaSpinner size={16} className="animate-spin" /> : <FaThumbsUp size={16} />}
                                   </button>
                                   <button
-                                    onClick={() => handleShowRejectionForm(material.id)}
+                                    onClick={() => handleShowRejectionForm(material.id)} // This will open details
                                     disabled={actionLoading === material.id}
-                                    className="p-1.5 text-red-600 rounded-md hover:bg-red-500/20 hover:text-red-700 transition-colors"
-                                    title="Rejeter"
+                                    className="p-1.5 text-red-600 rounded-md hover:bg-red-500/10 hover:text-red-700 transition-colors"
+                                    title="Rejeter (avec motif)"
                                   >
-                                    {(actionLoading === material.id && actionType === 'reject' && showRejectionFormForId !== material.id) ? <FaSpinner size={16} className="animate-spin" /> : <FaThumbsDown size={16} />}
+                                    <FaThumbsDown size={16} />
                                   </button>
                                 </>
+                                )
                               )}
                             </div>
                           </td>
                         </tr>
                         
                         {showDetailsId === material.id && (
-                          <tr className="bg-[#F5EFEB]/50">
+                          <tr className="bg-[#F5EFEB]/60 border-t border-b border-[#C8D9E6]/50">
                             <td colSpan="6" className="px-6 py-4">
                               <div className="space-y-3">
-                                <div>
-                                  <h4 className="text-sm font-semibold text-[#2F4156]">Détails de la demande:</h4>
-                                  <p className="mt-1 text-sm text-[#567C8D]"><span className="font-medium">Motif complet:</span> {material.motif}</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                                  <h4 className="text-sm font-semibold text-[#2F4156] md:col-span-2">Détails de la demande:</h4>
+                                  <p className="text-sm text-[#567C8D]"><span className="font-medium text-[#2F4156]">Demandeur:</span> {material.employe_nom || (material.employe ? `${material.employe.nom} ${material.employe.prenom}`: 'N/A')}</p>
+                                  <p className="text-sm text-[#567C8D]"><span className="font-medium text-[#2F4156]">Date demande:</span> {new Date(material.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                                  <p className="md:col-span-2 text-sm text-[#567C8D]"><span className="font-medium text-[#2F4156]">Motif complet:</span> {material.motif}</p>
                                 </div>
                                 
                                 {material.statut === 'rejete' && material.explication && (
-                                  <div className="bg-red-100 p-3 rounded-md border border-red-200">
+                                  <div className="bg-red-50 p-3 rounded-md border border-red-200 mt-2">
                                     <p className="text-sm text-red-700"><span className="font-medium">Raison du rejet:</span> {material.explication}</p>
                                   </div>
                                 )}
                                 
                                 {material.statut === 'en_attente' && (
-                                  <div className="space-y-3">
+                                  <div className="space-y-3 mt-3 pt-3 border-t border-[#C8D9E6]/70">
                                     {showRejectionFormForId === material.id && (
                                       <div>
                                         <label htmlFor={`rejectionReason-${material.id}`} className="block text-sm font-medium text-[#2F4156] mb-1">
-                                          Justification du rejet
+                                          Justification du rejet <span className="text-red-500">*</span>
                                         </label>
                                         <textarea
                                           id={`rejectionReason-${material.id}`}
@@ -312,22 +338,17 @@ export default function MaterialAdmin() {
                                       </div>
                                     )}
                                     
-                                    <div className="flex justify-end items-center gap-3 pt-2 border-t border-[#C8D9E6]/50">
-                                      <button
-                                        onClick={() => toggleDetails(material.id)} // This will also close rejection form
-                                        className="px-3 py-1.5 bg-[#E2E8F0] hover:bg-[#CBD5E1] text-[#2F4156] rounded-md transition-colors text-xs font-medium"
-                                      >
-                                        Fermer Détails
-                                      </button>
+                                    <div className="flex justify-end items-center gap-3">
+                                      {/* Close details button now handled by toggleDetails via FaEye icon */}
                                       
-                                      {!showRejectionFormForId && ( // Show approve if rejection form isn't active for this ID
+                                      {!showRejectionFormForId && ( 
                                         <button
                                           onClick={() => handleStatusUpdate(material.id, 'approuve')}
                                           disabled={actionLoading === material.id}
                                           className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-md shadow-sm text-xs font-semibold flex items-center disabled:opacity-60"
                                         >
                                           {(actionLoading === material.id && actionType === 'approve') ? <FaSpinner size={14} className="animate-spin mr-1.5" /> : <FaCheckCircle size={14} className="mr-1.5" />}
-                                          Approuver
+                                          Approuver la Demande
                                         </button>
                                       )}
                                       
@@ -340,14 +361,14 @@ export default function MaterialAdmin() {
                                           {(actionLoading === material.id && actionType === 'reject') ? <FaSpinner size={14} className="animate-spin mr-1.5" /> : <FaTimesCircle size={14} className="mr-1.5" />}
                                           Confirmer Rejet
                                         </button>
-                                      ) : ( // If rejection form is not shown for this ID, show button to open it
+                                      ) : ( 
                                         <button
                                           onClick={() => handleShowRejectionForm(material.id)}
                                           disabled={actionLoading === material.id}
-                                          className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md shadow-sm text-xs font-semibold flex items-center disabled:opacity-60"
+                                          className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md shadow-sm text-xs font-semibold flex items-center disabled:opacity-60"
                                         >
                                           <FaTimesCircle size={14} className="mr-1.5" />
-                                          Rejeter
+                                          Rejeter (avec motif)
                                         </button>
                                       )}
                                     </div>
@@ -364,22 +385,12 @@ export default function MaterialAdmin() {
               </div>
             )}
           </div>
-        </div>
-        <footer className="text-center py-3 border-t border-[#C8D9E6] bg-[#F5EFEB]/80 text-xs text-[#567C8D]">
+      </main>
+      <div className="border-t border-[#C8D9E6] bg-[#F5EFEB]/80">
+        <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-center text-xs text-[#567C8D]">
             Gestion de Matériel © {new Date().getFullYear()}
         </footer>
       </div>
-
-      {/* Style for fade-in animation (can be moved to a global CSS if used elsewhere) */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-out;
-        }
-      `}</style>
-    </>
+    </div>
   );
-} 
+}
