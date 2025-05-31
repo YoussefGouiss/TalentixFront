@@ -26,8 +26,7 @@ const TestSidebar = () => {
     { id: "Formation", icon: <FaBookOpen />, text: "Formation", route: "/admin/formation" },
     { id: "paie", icon: <FaFileInvoiceDollar />, text: "Fiches de paie", route: "/admin/FichePaie" },
     { id: "Recrutements", icon: <FaBriefcase />, text: "Recrutements", route: "/admin/recrutements" },
-    { id: "Attestations", icon: <FaFileContract />, text: "Attestations", route: "/admin/attestations-demandes" }, // Matched to previous component's link
-    { id: "AttestationTypes", icon: <FaFileAlt />, text: "Types Attest.", route: "/admin/attestations" }, // For managing types
+    { id: "AttestationTypes", icon: <FaFileAlt />, text: "Attestations.", route: "/admin/attestations" }, // For managing types
   ];
 
   const getActiveItem = () => {
