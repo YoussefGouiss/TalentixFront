@@ -140,7 +140,7 @@ export default function DashboardEmploye() {
       // 4. Matériel Summary
       let materielEnAttente = 0;
       try {
-        const materielRes = await fetch(`${API_BASE_URL}/material`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
+        const materielRes = await fetch(`http://localhost:8000/api/material`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
         if (materielRes.ok) {
           const materielData = await materielRes.json();
           const materielArray = Array.isArray(materielData) ? materielData : [];
@@ -301,25 +301,6 @@ export default function DashboardEmploye() {
         
         {/* Placeholder for Recent Activity or Announcements */}
         {/* This section would ideally be powered by specific backend data */}
-        <section>
-            <h2 className="text-xl font-semibold text-[#2F4156] mb-4">Activité Récente / Annonces</h2>
-            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                {loadingSummary ? (
-                    <div className="space-y-3">
-                        <div className="h-4 bg-slate-200 rounded animate-pulse w-3/4"></div>
-                        <div className="h-4 bg-slate-200 rounded animate-pulse w-1/2"></div>
-                        <div className="h-4 bg-slate-200 rounded animate-pulse w-5/6"></div>
-                    </div>
-                ) : (
-                    <div className="text-center py-8 text-[#567C8D]">
-                        <FaQuestionCircle size={32} className="mx-auto mb-3 text-[#A0B9CD]" />
-                        <p>Aucune activité récente à afficher pour le moment.</p>
-                        <p className="text-xs mt-1">Les annonces ou les mises à jour importantes apparaîtront ici.</p>
-                    </div>
-                )}
-            </div>
-        </section>
-
       </div>
     </div>
   );

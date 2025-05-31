@@ -20,7 +20,6 @@ export default function Sidebar() {
     {id: "Attestations", icon: <FileCheck size={20} />, text: "Attestations", route: "/admin/attestations" || "admin/demandeAttestation" },
     {id: "Mutations", icon: <File size={20} />, text: "Mutations", route: "/admin/mutations" },
     {id: "Contrats", icon: <Briefcase size={20} />, text: "Contrats", route: "/admin/contrats" },
-    {id: "Calendrier", icon: <Calendar size={20} />, text: "Calendrier", route: "/admin/calendrier" },
   ];
 
 

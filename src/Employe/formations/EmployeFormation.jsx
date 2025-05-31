@@ -267,8 +267,8 @@ export default function EmployeFormations() {
                     >
                         <option value="tous">Tous les statuts</option>
                         <option value="en attente">En attente</option>
-                        <option value="approuve">Approuvées</option> {/* Consistent with backend/badge */}
-                        <option value="rejete">Rejetées</option> {/* Consistent with backend/badge */}
+                        <option value="approuvée">Approuvées</option> {/* Consistent with backend/badge */}
+                        <option value="rejetée">Rejetées</option> {/* Consistent with backend/badge */}
                     </select>
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <svg className="h-4 w-4 text-[#A0B9CD]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>

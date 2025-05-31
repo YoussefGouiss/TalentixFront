@@ -28,7 +28,6 @@ export default function SidebarEmploye() {
     { id: "Formation", icon: <BookOpen size={22} />, text: "Formation", route: "/employe/formations" },
     { id: "Absences", icon: <FileText size={22} />, text: "Absences", route: "/employe/absences" },
     { id: "Attestations", icon: <FileCheck size={22} />, text: "Attestations", route: "/employe/attestations" },
-    { id: "Calendrier", icon: <Calendar size={22} />, text: "Calendrier", route: "/employe/calendrier" },
     { id: "Materiel", icon: <Briefcase size={22} />, text: "Matériel", route: "/employe/material" },
   ];
 
@@ -54,7 +53,7 @@ export default function SidebarEmploye() {
   const handleLogout = () => {
     console.log("Employee logging out...");
     localStorage.removeItem('employe_token');
-    navigate('/login-employe'); // Adjust if your employee login route is different
+    navigate('/employe/login'); // Adjust if your employee login route is different
   };
 
   const updateScrollButtonStates = useCallback(() => {

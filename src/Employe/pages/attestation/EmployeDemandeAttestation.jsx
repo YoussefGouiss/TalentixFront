@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 // Admin-theme icons from react-icons/fa
 import { 
     FaPlusCircle, FaTrashAlt, FaSearch, FaChevronDown, FaQuestionCircle, FaSpinner, 
-    FaPaperPlane, FaFilePdf, FaSync, FaTimes, FaCheckSquare, FaTimesCircle, 
+    FaPaperPlane, FaFilePdf, FaSync, FaTimes, FaCheckSquare, FaTimesCircle, FaCheckCircle,
     FaFilter, FaExclamationTriangle // Added FaFilter just in case, FaExclamationTriangle for Notification
 } from 'react-icons/fa'; 
 // Lucide icon removed as FaSpinner is used for loading
@@ -58,8 +58,8 @@ const SlideDown = ({ isVisible, children }) => (
 // --- Status Configuration ---
 const STATUS_OPTIONS_DISPLAY = [
   { value: 'en attente', label: 'En Attente', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: <FaSpinner size={14} className="mr-1.5 animate-spin" /> },
-  { value: 'acceptee', label: 'Acceptée', color: 'bg-green-100 text-green-700 border-green-300', icon: <FaCheckSquare size={14} className="mr-1.5" /> },
-  { value: 'refusee', label: 'Refusée', color: 'bg-red-100 text-red-700 border-red-300', icon: <FaTimesCircle size={14} className="mr-1.5" /> },
+  { value: 'accepte', label: 'Acceptée', color: 'bg-green-100 text-green-700 border-green-300', icon: <FaCheckCircle size={14} className="mr-1.5" /> },
+  { value: 'refuse', label: 'Refusée', color: 'bg-red-100 text-red-700 border-red-300', icon: <FaTimesCircle size={14} className="mr-1.5" /> },
 ];
 
 const getStatusDetails = (statusValue) => {
@@ -92,7 +92,7 @@ export default function EmployeDemandeAttestation() {
 
   const MY_DEMANDES_API_URL = 'http://localhost:8000/api/employe/mes-demandes';
   const ATTESTATION_TYPES_API_URL = 'http://localhost:8000/api/employe/attestations'; // This seems to be for GET types and POST new demande
-  // const DEMANDE_API_URL = 'http://localhost:8000/api/employe/attestations'; // Already defined above
+  const DEMANDE_API_URL = 'http://localhost:8000/api/employe/attestations'; // Already defined above
 
   const getToken = () => localStorage.getItem('employe_token');
 
@@ -202,7 +202,7 @@ export default function EmployeDemandeAttestation() {
       // Assuming DELETE request for a specific demande goes to /api/employe/mes-demandes/{id}
       // or /api/employe/attestations/{id} - adjust API URL if needed.
       // Using MY_DEMANDES_API_URL for consistency with how they are fetched.
-      const response = await fetch(`${MY_DEMANDES_API_URL}/${demandeId}`, { 
+      const response = await fetch(`${DEMANDE_API_URL}/${demandeId}`, { 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept': 'application/json' },
       });
@@ -412,12 +412,12 @@ export default function EmployeDemandeAttestation() {
                             ) : (<span className="text-gray-400 italic">-</span>)}
                           </td>
                           <td className="py-3 px-4 text-center">
-                            {(demande.statut === 'en attente' || demande.statut === null) && (
+                            {(demande.statut?.toLowerCase() === 'en attente' || demande.statut === null) && (
                               <button onClick={() => handleDeleteDemande(demande.id)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-md transition-colors" title="Annuler la Demande" disabled={isSubmitting}>
                                 {isSubmitting ? <FaSpinner className="animate-spin" size={16}/> : <FaTrashAlt size={16} />}
                               </button>
                             )}
-                            {demande.statut !== 'en attente' && demande.statut !== null && (
+                            {demande.statut?.toLowerCase() !== 'en attente' && demande.statut !== null && (
                                 <span className="text-xs text-gray-400 italic">Traité</span>
                             )}
                           </td>

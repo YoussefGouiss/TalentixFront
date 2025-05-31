@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FaCheckSquare, FaSearch, FaChevronDown, FaQuestionCircle, FaSpinner, FaSync, FaArrowLeft,
-  FaPaperclip, FaTimesCircle, FaFilePdf, FaUpload, FaPaperPlane, FaTrashAlt, FaCheckCircle, FaClock // Themed Icons
+  FaPaperclip, FaTimesCircle, FaFilePdf, FaUpload, FaPaperPlane, FaTrashAlt, FaCheckCircle, FaClock, FaFilter // Added FaFilter for the dropdown
 } from 'react-icons/fa';
 
 // --- Themed Stubs / Re-used Components ---
@@ -18,7 +18,7 @@ const ThemedNotification = ({ message, type, show, onDismiss }) => {
     <div
       className={`fixed top-5 right-5 z-[100] p-4 rounded-lg shadow-xl transform transition-all duration-500 ease-in-out
                   ${show ? 'translate-y-0 opacity-100' : '-translate-y-16 opacity-0 pointer-events-none'}
-                  ${bgColor} ${textColor} border-l-4 ${borderColor} flex items-center justify-between`}
+                  ${bgColor} ${textColor} border-l-4 ${borderColor} flex items-center justify-between min-w-[300px]`}
     >
       <div className="flex items-center">
         <Icon size={20} className="mr-3 flex-shrink-0" />
@@ -26,23 +26,22 @@ const ThemedNotification = ({ message, type, show, onDismiss }) => {
       </div>
       {onDismiss && (
         <button onClick={onDismiss} className="ml-4 text-current hover:opacity-75">
-          <FaTimesCircle size={18} /> {/* Changed to FaTimesCircle for consistency */}
+          <FaTimesCircle size={18} />
         </button>
       )}
     </div>
   );
 };
 
-// Themed Skeleton Loader (stub matching Employee.jsx for table columns)
-const ThemedSkeletonLoader = ({ rows = 5, cols = 7 }) => { // Defaulting to 7 based on your headers
+const ThemedSkeletonLoader = ({ rows = 5, cols = 7 }) => {
   return (
     <div className="animate-pulse p-4">
       {[...Array(rows)].map((_, i) => (
-        <div key={i} className={`grid grid-cols-${cols + 1} gap-4 py-3.5 border-b border-[#C8D9E6]/40 items-center`}> {/* +1 for actions */}
+        <div key={i} className={`grid grid-cols-${cols + 1} gap-4 py-3.5 border-b border-[#C8D9E6]/40 items-center`}>
           {[...Array(cols)].map((_, j) => (
             <div key={j} className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>
           ))}
-          <div className="h-8 bg-[#C8D9E6]/70 rounded w-full col-span-1"></div> {/* Actions cell */}
+          <div className="h-8 bg-[#C8D9E6]/70 rounded w-full col-span-1"></div>
         </div>
       ))}
     </div>
@@ -51,14 +50,20 @@ const ThemedSkeletonLoader = ({ rows = 5, cols = 7 }) => { // Defaulting to 7 ba
 // --- End Themed Stubs ---
 
 
-const STATUS_OPTIONS = [
+const STATUS_OPTIONS_FOR_SELECT = [ // Used for the select dropdown in actions
   { value: 'en attente', label: 'En Attente', icon: <FaClock size={13} className="mr-1.5" /> },
   { value: 'accepte', label: 'Acceptée', icon: <FaCheckCircle size={13} className="mr-1.5" /> },
   { value: 'refuse', label: 'Refusée', icon: <FaTimesCircle size={13} className="mr-1.5" /> },
 ];
 
+const STATUS_OPTIONS_FOR_FILTER = [ // Used for the filter dropdown
+  { value: 'all', label: 'Tous les Statuts' },
+  ...STATUS_OPTIONS_FOR_SELECT,
+];
+
+
 const getStatusDetails = (statusValue) => {
-  const status = STATUS_OPTIONS.find(s => s.value === statusValue?.toLowerCase());
+  const status = STATUS_OPTIONS_FOR_SELECT.find(s => s.value === statusValue?.toLowerCase());
   if (status) {
     let colorClass = '';
     if (status.value === 'en attente') colorClass = 'text-yellow-700 bg-yellow-100 border-yellow-300';
@@ -66,7 +71,7 @@ const getStatusDetails = (statusValue) => {
     else if (status.value === 'refuse') colorClass = 'text-red-700 bg-red-100 border-red-300';
     return { label: status.label, colorClass, icon: status.icon };
   }
-  return { label: statusValue || 'Inconnu', colorClass: 'text-gray-700 bg-gray-100 border-gray-300', icon: null };
+  return { label: statusValue || 'Inconnu', colorClass: 'text-gray-700 bg-gray-100 border-gray-300', icon: <FaQuestionCircle size={13} className="mr-1.5"/> };
 };
 
 
@@ -86,6 +91,8 @@ export default function AttestationDemandeList() {
   const [sortDirection, setSortDirection] = useState('desc');
   const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
   
+  const [filterStatus, setFilterStatus] = useState('all'); // <<< New state for status filter
+
   const [updatingStatusDemandeId, setUpdatingStatusDemandeId] = useState(null);
   const [uploadingPdfDemandeId, setUploadingPdfDemandeId] = useState(null);
   const [deletingPdfDemandeId, setDeletingPdfDemandeId] = useState(null);
@@ -118,6 +125,7 @@ export default function AttestationDemandeList() {
       setDemandes(Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []));
     } catch (err) {
       setError(err.message); setDemandes([]);
+      showAppNotification(err.message, 'error');
     } finally { setIsLoading(false); }
   };
 
@@ -126,7 +134,7 @@ export default function AttestationDemandeList() {
   useEffect(() => {
     let timer;
     if (notification.show) {
-        timer = setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
+        timer = setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 4000);
     }
     return () => clearTimeout(timer);
   }, [notification.show]);
@@ -170,8 +178,8 @@ export default function AttestationDemandeList() {
       const responseData = await response.json();
       if (!response.ok) throw new Error(responseData.message || responseData.error || 'Erreur lors de la mise à jour.');
       
-      showAppNotification(responseData.message || 'Statut mis à jour.');
-      const updatedAttestation = responseData.data || responseData;
+      showAppNotification(responseData.message || 'Statut mis à jour avec succès.');
+      const updatedAttestation = responseData.data || responseData; // Assuming API returns the updated object
       setDemandes(prevDemandes =>
         prevDemandes.map(d => (d.id === demandeId ? { ...d, statut: updatedAttestation.statut } : d))
       );
@@ -185,9 +193,9 @@ export default function AttestationDemandeList() {
     if (!fileToUpload) { showAppNotification("Aucun PDF sélectionné.", "error"); return; }
     setUploadingPdfDemandeId(demandeId);
 
-    const formDataBody = new FormData(); // Renamed to avoid conflict with component's formData state if any
+    const formDataBody = new FormData();
     formDataBody.append('pdf', fileToUpload);
-    formDataBody.append('_method', 'PUT'); // If backend expects PUT for file update via POST
+    formDataBody.append('_method', 'PUT'); 
 
     const headers = {
         'Authorization': `Bearer ${getToken()}`,
@@ -200,12 +208,12 @@ export default function AttestationDemandeList() {
         method: 'POST', headers, body: formDataBody,
       });
       const responseData = await response.json();
-      if (!response.ok) throw new Error(responseData.message || responseData.error || 'Erreur soumission PDF.');
+      if (!response.ok) throw new Error(responseData.message || responseData.error || 'Erreur lors de la soumission du PDF.');
       
-      showAppNotification(responseData.message || 'PDF soumis.');
+      showAppNotification(responseData.message || 'PDF soumis avec succès.');
       const updatedAttestation = responseData.data || responseData;
       setDemandes(prevDemandes =>
-        prevDemandes.map(d => (d.id === demandeId ? { ...d, pdf: updatedAttestation.pdf, statut: updatedAttestation.statut || d.statut } : d)) // Also update status if backend sends it
+        prevDemandes.map(d => (d.id === demandeId ? { ...d, pdf: updatedAttestation.pdf, statut: updatedAttestation.statut || d.statut } : d))
       );
       clearSelectedPdf(demandeId);
     } catch (err) {
@@ -214,7 +222,7 @@ export default function AttestationDemandeList() {
   };
 
   const handleDeletePdf = async (demandeId) => {
-    if (!window.confirm("Supprimer ce PDF?")) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce PDF ? Cette action est irréversible.")) return;
     setDeletingPdfDemandeId(demandeId);
     const headers = {
         'Authorization': `Bearer ${getToken()}`,
@@ -224,10 +232,10 @@ export default function AttestationDemandeList() {
 
     try {
         const response = await fetch(`${ATTESTATION_API_BASE_URL}/${demandeId}/pdf`, { method: 'DELETE', headers });
-        const responseData = await response.json();
-        if (!response.ok) throw new Error(responseData.message || responseData.error || 'Erreur suppression PDF.');
+        const responseData = await response.json(); // Or .text() if API returns no body or text
+        if (!response.ok && response.status !== 204) throw new Error(responseData.message || responseData.error || 'Erreur lors de la suppression du PDF.');
         
-        showAppNotification(responseData.message || 'PDF supprimé.');
+        showAppNotification(responseData.message || 'PDF supprimé avec succès.');
         setDemandes(prevDemandes =>
             prevDemandes.map(d => (d.id === demandeId ? { ...d, pdf: null } : d))
         );
@@ -245,14 +253,19 @@ export default function AttestationDemandeList() {
   const sortedAndFilteredDemandes = [...demandes]
     .filter(demande => { 
       const searchTermLower = searchTerm.toLowerCase();
-      return (
+      const matchesSearchTerm = (
         (demande.id?.toString().includes(searchTermLower)) ||
         (getNestedValue(demande, 'employe.nom')?.toLowerCase().includes(searchTermLower)) ||
+        (getNestedValue(demande, 'employe.prenom')?.toLowerCase().includes(searchTermLower)) ||
         (getNestedValue(demande, 'employe.email')?.toLowerCase().includes(searchTermLower)) ||
         (getNestedValue(demande, 'attestation_type.type')?.toLowerCase().includes(searchTermLower)) ||
         (demande.statut?.toLowerCase().includes(searchTermLower)) ||
         (demande.date_demande && new Date(demande.date_demande).toLocaleDateString('fr-FR').includes(searchTermLower))
       );
+
+      const matchesStatusFilter = filterStatus === 'all' || demande.statut?.toLowerCase() === filterStatus; // <<< Filter by status
+
+      return matchesSearchTerm && matchesStatusFilter;
     })
     .sort((a,b) => {
         if (!sortField) return 0;
@@ -260,13 +273,20 @@ export default function AttestationDemandeList() {
         let valB = getNestedValue(b, sortField);
 
         if (valA == null) valA = ''; if (valB == null) valB = '';
-        if (sortField.includes('date_')) { // Simplified date comparison
-            valA = valA ? new Date(valA).getTime() : 0;
-            valB = valB ? new Date(valB).getTime() : 0;
-        }
-        if (typeof valA === 'number' && typeof valB === 'number') return sortDirection === 'asc' ? valA - valB : valB - valA;
         
-        valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase();
+        if (sortField.includes('date_')) {
+            const dateA = valA ? new Date(valA).getTime() : 0;
+            const dateB = valB ? new Date(valB).getTime() : 0;
+            return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+        }
+        
+        if (typeof valA === 'number' && typeof valB === 'number') {
+             return sortDirection === 'asc' ? valA - valB : valB - valA;
+        }
+        
+        valA = String(valA).toLowerCase(); 
+        valB = String(valB).toLowerCase();
+
         if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
         if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
         return 0;
@@ -275,7 +295,7 @@ export default function AttestationDemandeList() {
   const tableHeaders = [ 
     { label: 'ID', field: 'id' }, { label: 'Employé', field: 'employe.nom' },
     { label: 'Type', field: 'attestation_type.type' }, { label: 'Date Dem.', field: 'date_demande' },
-    { label: 'Date Livr.', field: 'date_livraison' }, { label: 'Doc. PDF', field: 'pdf' },
+    { label: 'Date Livr.', field: 'date_livraison' }, { label: 'Doc. PDF', field: 'pdf', sortable: false },
     { label: 'Statut', field: 'statut' },
   ];
 
@@ -300,7 +320,7 @@ export default function AttestationDemandeList() {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/admin/attestations" // Link to AttestationTypeManagement
+              to="/admin/attestations"
               className="flex items-center gap-2 px-4 py-2 bg-[#567C8D] hover:bg-[#4A6582] text-white rounded-md shadow-sm transition-colors text-sm font-medium"
             > <FaArrowLeft size={16} /> Types d'Attestation </Link>
             <button
@@ -312,8 +332,8 @@ export default function AttestationDemandeList() {
         </header>
 
         <div className="p-6">
-          <div className="mb-6">
-            <div className="relative">
+          <div className="mb-6 flex flex-col sm:flex-row gap-4"> {/* <<< Flex container for search and filter */}
+            <div className="relative flex-grow"> {/* Search input */}
               <input
                 type="text" placeholder="Rechercher (ID, Employé, Type, Statut, Date...)"
                 className="w-full pl-10 pr-10 py-2.5 border border-[#C8D9E6] rounded-lg text-[#2F4156] bg-white
@@ -329,15 +349,31 @@ export default function AttestationDemandeList() {
                     </button>
                 )}
             </div>
+            <div className="relative w-full sm:w-auto sm:min-w-[200px]"> {/* <<< Filter dropdown */}
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full pl-3 pr-10 py-2.5 border border-[#C8D9E6] rounded-lg text-[#2F4156] bg-white
+                           appearance-none
+                           focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] transition-all outline-none"
+              >
+                {STATUS_OPTIONS_FOR_FILTER.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#567C8D]">
+                <FaFilter size={14} />
+              </div>
+            </div>
           </div>
 
           <div className="bg-white border border-[#C8D9E6] rounded-lg shadow-md overflow-hidden">
             <div className="border-b border-[#C8D9E6] bg-[#F5EFEB]/80 px-5 py-3.5">
-              <h2 className="font-semibold text-[#2F4156]">Liste des Demandes</h2>
+              <h2 className="font-semibold text-[#2F4156]">Liste des Demandes ({sortedAndFilteredDemandes.length})</h2>
             </div>
             {isLoading && !demandes.length ? (
               <ThemedSkeletonLoader rows={7} cols={tableHeaders.length} />
-            ) : error ? (
+            ) : error && !demandes.length ? ( // Show error only if no data and error occurred
               <div className="p-12 text-center flex flex-col items-center">
                 <FaQuestionCircle size={40} className="text-red-500 mb-4" />
                 <p className="text-xl font-medium text-[#2F4156]">{error}</p>
@@ -355,10 +391,10 @@ export default function AttestationDemandeList() {
                       {tableHeaders.map((header) => (
                         <th key={header.field}
                             className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider cursor-pointer hover:bg-[#C8D9E6]/60 transition-colors"
-                            onClick={() => handleSort(header.field)}>
+                            onClick={() => header.sortable !== false && handleSort(header.field)}>
                           <div className="flex items-center">
                             {header.label}
-                            {sortField === header.field && <FaChevronDown className={`ml-1.5 w-3 h-3 transition-transform duration-200 text-[#567C8D] ${sortDirection === 'desc' ? 'rotate-180' : ''}`} />}
+                            {header.sortable !== false && sortField === header.field && <FaChevronDown className={`ml-1.5 w-3 h-3 transition-transform duration-200 text-[#567C8D] ${sortDirection === 'desc' ? 'rotate-180' : ''}`} />}
                           </div>
                         </th>
                       ))}
@@ -389,7 +425,7 @@ export default function AttestationDemandeList() {
                           <tr key={demande.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150 text-sm">
                             <td className="py-3 px-4 whitespace-nowrap text-[#2F4156] font-medium">{demande.id}</td>
                             <td className="py-3 px-4 whitespace-nowrap">
-                                <div className="font-medium text-[#2F4156]">{getNestedValue(demande, 'employe.nom') || 'N/A'}</div>
+                                <div className="font-medium text-[#2F4156]">{getNestedValue(demande, 'employe.nom') || 'N/A'} {getNestedValue(demande, 'employe.prenom') || ''}</div>
                                 {getNestedValue(demande, 'employe.email') && 
                                     <div className="text-xs text-[#567C8D]">{getNestedValue(demande, 'employe.email')}</div>}
                             </td>
@@ -411,9 +447,8 @@ export default function AttestationDemandeList() {
                             </td>
 
                             <td className="py-3 px-4">
-                              <div className="flex flex-col items-center gap-2 w-full max-w-[220px] mx-auto"> {/* Max width for actions cell */}
+                              <div className="flex flex-col items-center gap-2 w-full max-w-[220px] mx-auto">
                                 
-                                {/* PDF Management Box */}
                                 <div className="w-full border border-[#C8D9E6]/70 p-2 rounded-md bg-[#F5EFEB]/40 space-y-1.5">
                                   <button
                                     type="button"
@@ -467,10 +502,9 @@ export default function AttestationDemandeList() {
                                   )}
                                 </div>
                                 
-                                {/* Status Update Box */}
                                 <div className="w-full border border-[#C8D9E6]/70 p-2 rounded-md bg-[#F5EFEB]/40">
                                    {isUpdatingThisStatus ? (
-                                      <div className="flex justify-center items-center h-[34px]"> {/* Match select height */}
+                                      <div className="flex justify-center items-center h-[34px]">
                                           <FaSpinner size={18} className="animate-spin text-[#567C8D]" />
                                       </div>
                                     ) : (
@@ -484,7 +518,7 @@ export default function AttestationDemandeList() {
                                                  hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-[#567C8D]
                                                  disabled:opacity-60 disabled:cursor-not-allowed"
                                     >
-                                      {STATUS_OPTIONS.map(option => (
+                                      {STATUS_OPTIONS_FOR_SELECT.map(option => (
                                         <option key={option.value} value={option.value}>{option.label}</option>
                                       ))}
                                     </select>
