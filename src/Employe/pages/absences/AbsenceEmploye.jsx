@@ -450,7 +450,6 @@ const AbsenceEmploye = () => {
                                     <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Fin</th>
                                     <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider hidden md:table-cell">Motif</th>
                                     <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Justif.</th>
-                                    <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider hidden lg:table-cell">Impact Sal.</th>
                                     <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Fichier</th>
                                     <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Statut Admin</th>
                                     <th scope="col" className="py-3 px-4 text-center text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Actions</th>
@@ -468,12 +467,6 @@ const AbsenceEmploye = () => {
                                             {absence.justifiee ? 
                                                 <FaCheckCircle className="text-green-500 mx-auto" title="Oui"/> : 
                                                 <FaTimesCircle className="text-red-500 mx-auto" title="Non"/>
-                                            }
-                                        </td>
-                                        <td className="py-3 px-4 whitespace-nowrap text-sm text-center hidden lg:table-cell">
-                                            {absence.impact_salaire ? 
-                                                <FaExclamationTriangle className="text-yellow-500 mx-auto" title="Oui"/> : 
-                                                <span className="text-gray-400">-</span>
                                             }
                                         </td>
                                         <td className="py-3 px-4 whitespace-nowrap text-sm text-center">
