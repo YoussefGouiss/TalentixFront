@@ -29,6 +29,8 @@ import Conge from './Employe/pages/conges/Conge';
 import AbsenceAdmin from './Admin/pages/Abscence/AbsenceAdmin';
 import AbsenceEmploye from './Employe/pages/absences/AbsenceEmploye';
 import WelcomPageTest from './WelcomPage';
+import PrimesAdmin from './Admin/pages/prime/Prime';
+import EmployePrimes from './Employe/pages/absences/primes/Primes';
  const route = createBrowserRouter([
         {
             path :'/',
@@ -95,10 +97,16 @@ import WelcomPageTest from './WelcomPage';
                     path : 'attestations',
                     element : <AttestationTypeManagement/>
                 },
-                 {
+                {
                     path : 'demandeAttestation',
                     element : <AttestationDemandeList/>
                 },
+                {
+                    path : 'primes',
+                    element : <PrimesAdmin/>
+                },
+               
+               
                 
             ],
         },
@@ -129,6 +137,10 @@ import WelcomPageTest from './WelcomPage';
                 {
                     path : 'absences',
                     element  : <AbsenceEmploye/>
+                },
+                {
+                    path : 'primes',
+                    element  : <EmployePrimes/>
                 },
             ]
         }

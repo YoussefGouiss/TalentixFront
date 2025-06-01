@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
     FaPlus, FaEdit, FaTrashAlt, FaTimesCircle, FaCheckCircle, 
-    FaExclamationTriangle, FaSpinner, FaPaperclip, FaCalendarAlt // FaEye removed as not used
+    FaExclamationTriangle, FaSpinner, FaPaperclip, FaCalendarAlt
 } from 'react-icons/fa';
 
 // --- Notification Component ---
@@ -139,7 +139,6 @@ const AbsenceEmploye = () => {
             fetchMesAbsences();
         } else {
             // The component will render the "Token non trouvé" message below.
-            // showAppNotification can still be used if an immediate pop-up is also desired.
         }
     }, [fetchMesAbsences]);
 
@@ -206,9 +205,8 @@ const AbsenceEmploye = () => {
         formDataPayload.append('_method', 'PUT'); // For Laravel to recognize as PUT
 
         try {
-            // Note: For FormData with PUT, Laravel expects POST method with _method field
             const response = await customFetch(`/employe/absences/${currentAbsenceToEdit.id}`, {
-                method: 'POST', // Important for FormData with _method
+                method: 'POST', 
                 body: formDataPayload,
             });
             showAppNotification(response.message || 'Demande mise à jour.', 'success');
@@ -300,19 +298,21 @@ const AbsenceEmploye = () => {
             />
 
             <div className="bg-[#F5EFEB]/80 border-b border-[#C8D9E6] shadow-sm">
-                <header className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6">
-                    <h1 className="text-2xl font-bold tracking-tight text-[#2F4156]">Mes Demandes d'Absence</h1>
+                {/* Removed max-w-*, mx-auto. Relies on px-* for side margins. */}
+                <header className="px-4 sm:px-6 lg:px-8 py-4 md:py-6">
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[#2F4156]">Mes Demandes d'Absence</h1>
                 </header>
             </div>
 
-            <main className="max-w-5xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            {/* Removed max-w-*, mx-auto. Relies on px-* for side margins. */}
+            <main className="py-6 px-4 sm:px-6 lg:px-8">
                 <div className="mb-6 text-right">
                     <button onClick={() => setShowDemandeModal(true)} className={buttonPrimaryClasses}>
                         <FaPlus size={16} className="mr-2"/> Demander une Absence
                     </button>
                 </div>
 
-                {/* Demande Absence Modal */}
+                {/* Demande Absence Modal - Stays the same (fixed, centered) */}
                 {showDemandeModal && (
                     <div className={modalOverlayClasses}>
                         <div className={modalContentClasses}>
@@ -351,7 +351,7 @@ const AbsenceEmploye = () => {
                     </div>
                 )}
 
-                {/* Edit Absence Modal */}
+                {/* Edit Absence Modal - Stays the same */}
                 {showEditModal && currentAbsenceToEdit && (
                         <div className={modalOverlayClasses}>
                         <div className={modalContentClasses}>
@@ -395,7 +395,7 @@ const AbsenceEmploye = () => {
                     </div>
                 )}
 
-                {/* Delete Confirmation Modal */}
+                {/* Delete Confirmation Modal - Stays the same */}
                 {showDeleteConfirmModal && absenceToDelete && (
                     <div className={modalOverlayClasses}>
                         <div className={modalContentClasses}>
@@ -422,11 +422,12 @@ const AbsenceEmploye = () => {
                     </div>
                 )}
                 
-                <div className="mt-6 bg-white border border-[#C8D9E6] rounded-lg shadow-md overflow-hidden">
+                {/* This div will now expand to full width (minus main's padding) */}
+                <div className="mt-8 bg-white border border-[#C8D9E6] rounded-lg shadow-xl overflow-hidden"> {/* Added shadow-xl for more emphasis */}
                         {loading && !isSubmitting && myAbsences.length === 0 && (
-                        <div className="p-4 animate-pulse">
+                        <div className="p-6 animate-pulse">
                             {[...Array(3)].map((_, i) => (
-                            <div key={i} className="grid grid-cols-4 sm:grid-cols-8 gap-4 py-3.5 border-b border-[#C8D9E6]/40 items-center">
+                            <div key={i} className="grid grid-cols-4 sm:grid-cols-8 gap-4 py-4 border-b border-[#C8D9E6]/40 items-center">
                                 {[...Array(7)].map((_,j) => <div key={j} className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>)}
                                 <div className="h-8 bg-[#C8D9E6]/70 rounded w-full col-span-1 flex gap-1 p-1">
                                     <div className="h-full bg-[#A0B9CD]/80 rounded w-1/2"></div><div className="h-full bg-[#A0B9CD]/80 rounded w-1/2"></div>
@@ -436,24 +437,26 @@ const AbsenceEmploye = () => {
                         </div>
                     )}
                     {!loading && myAbsences.length === 0 && (
-                            <div className="p-10 text-center flex flex-col items-center">
-                            <FaCalendarAlt size={40} className="mx-auto text-[#A0B9CD] mb-4" />
+                        <div className="p-12 text-center flex flex-col items-center">
+                            <FaCalendarAlt size={48} className="mx-auto text-[#A0B9CD] mb-5" />
                             <p className="text-xl font-medium text-[#2F4156]">Aucune demande d'absence.</p>
                             <p className="text-[#567C8D] mt-2">Vous n'avez pas encore soumis de demande d'absence.</p>
                         </div>
                     )}
                     {myAbsences.length > 0 && (
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full">
+                    <div className="overflow-x-auto"> {/* This handles horizontal scroll if content is too wide */}
+                        <table className="min-w-full"> {/* Ensures table tries to fill its container */}
                             <thead className="bg-[#C8D9E6]/30">
                                 <tr>
-                                    <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Début</th>
-                                    <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Fin</th>
-                                    <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider hidden md:table-cell">Motif</th>
-                                    <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Justif</th>
-                                    <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Fichier</th>
-                                    <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Statut Admin</th>
-                                    <th scope="col" className="py-3 px-4 text-center text-xs font-semibold text-[#2F4156] uppercase tracking-wider">Actions</th>
+
+                                    <th scope="col" className="py-4 px-6 text-left text-sm font-semibold text-[#2F4156] uppercase tracking-wider">Début</th>
+                                    <th scope="col" className="py-4 px-6 text-left text-sm font-semibold text-[#2F4156] uppercase tracking-wider">Fin</th>
+                                    {/* Increased max-width for Motif to max-w-lg */}
+                                    <th scope="col" className="py-4 px-6 text-left text-sm font-semibold text-[#2F4156] uppercase tracking-wider hidden md:table-cell">Motif</th>
+                                    <th scope="col" className="py-4 px-6 text-left text-sm font-semibold text-[#2F4156] uppercase tracking-wider">Justif.</th>
+                                    <th scope="col" className="py-4 px-6 text-left text-sm font-semibold text-[#2F4156] uppercase tracking-wider">Fichier</th>
+                                    <th scope="col" className="py-4 px-6 text-left text-sm font-semibold text-[#2F4156] uppercase tracking-wider">Statut Admin</th>
+                                    <th scope="col" className="py-4 px-6 text-center text-sm font-semibold text-[#2F4156] uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#C8D9E6]/70">
@@ -461,30 +464,31 @@ const AbsenceEmploye = () => {
                                     const canAction = canModifyOrDelete(absence.created_at, absence.statut_admin);
                                     return (
                                     <tr key={absence.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150">
-                                        <td className="py-3 px-4 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(absence.date_debut)}</td>
-                                        <td className="py-3 px-4 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(absence.date_fin)}</td>
-                                        <td className="py-3 px-4 text-sm text-[#567C8D] whitespace-normal max-w-xs break-words hidden md:table-cell" title={absence.motif}>{absence.motif || '-'}</td>
-                                        <td className="py-3 px-4 whitespace-nowrap text-sm text-center">
+                                        <td className="py-4 px-6 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(absence.date_debut)}</td>
+                                        <td className="py-4 px-6 whitespace-nowrap text-sm text-[#567C8D]">{formatDate(absence.date_fin)}</td>
+                                        {/* Increased max-width for Motif to max-w-lg */}
+                                        <td className="py-4 px-6 text-sm text-[#567C8D] whitespace-normal max-w-lg break-words hidden md:table-cell" title={absence.motif}>{absence.motif || '-'}</td>
+                                        <td className="py-4 px-6 whitespace-nowrap text-sm text-center">
                                             {absence.justifiee ? 
                                                 <FaCheckCircle className="text-green-500 mx-auto" title="Oui"/> : 
                                                 <FaTimesCircle className="text-red-500 mx-auto" title="Non"/>
                                             }
                                         </td>
-                                        <td className="py-3 px-4 whitespace-nowrap text-sm text-center">
+                                        <td className="py-4 px-6 whitespace-nowrap text-sm text-center">
                                             {absence.justificatif ? (
                                                 <a href={`${STORAGE_BASE_URL}/${absence.justificatif}`} target="_blank" rel="noopener noreferrer" className="text-[#567C8D] hover:text-[#2F4156] hover:underline inline-block">
                                                     <FaPaperclip size={16} />
                                                 </a>
                                             ) : ('-')}
                                         </td>
-                                        <td className="py-3 px-4 whitespace-nowrap text-sm">{getAbsenceStatusBadge(absence.statut_admin, absence.justifiee)}</td>
-                                        <td className="py-3 px-4 whitespace-nowrap text-sm font-medium">
+                                        <td className="py-4 px-6 whitespace-nowrap text-sm">{getAbsenceStatusBadge(absence.statut_admin, absence.justifiee)}</td>
+                                        <td className="py-4 px-6 whitespace-nowrap text-sm font-medium">
                                             {canAction ? (
                                                 <div className="flex justify-center items-center gap-3">
-                                                    <button onClick={() => openEditModal(absence)} className="text-[#567C8D] hover:text-[#2F4156] p-1 hover:bg-slate-100 rounded-md" title="Modifier">
+                                                    <button onClick={() => openEditModal(absence)} className="text-[#567C8D] hover:text-[#2F4156] p-1.5 hover:bg-slate-100 rounded-md" title="Modifier">
                                                         <FaEdit size={16} />
                                                     </button>
-                                                    <button onClick={() => openDeleteConfirmModal(absence)} className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-md" title="Supprimer">
+                                                    <button onClick={() => openDeleteConfirmModal(absence)} className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded-md" title="Supprimer">
                                                         <FaTrashAlt size={16} />
                                                     </button>
                                                 </div>
@@ -501,8 +505,9 @@ const AbsenceEmploye = () => {
                 </div>
             </main>
 
-            <div className="border-t border-[#C8D9E6] bg-[#F5EFEB]/80">
-                <footer className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-center text-xs text-[#567C8D]">
+            <div className="border-t border-[#C8D9E6] bg-[#F5EFEB]/80 mt-12"> {/* Added mt-12 for more spacing */}
+                {/* Removed max-w-*, mx-auto. Relies on px-* for side margins. */}
+                <footer className="px-4 sm:px-6 lg:px-8 py-4 text-center text-xs text-[#567C8D]">
                     Gestion des Absences © {new Date().getFullYear()}
                 </footer>
             </div>
