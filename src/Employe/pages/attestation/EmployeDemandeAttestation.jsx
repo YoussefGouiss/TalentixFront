@@ -3,9 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { 
     FaPlusCircle, FaTrashAlt, FaSearch, FaChevronDown, FaQuestionCircle, FaSpinner, 
     FaPaperPlane, FaFilePdf, FaSync, FaTimes, FaCheckSquare, FaTimesCircle, FaCheckCircle,
-    FaFilter, FaExclamationTriangle // Added FaFilter just in case, FaExclamationTriangle for Notification
+    FaFilter, FaExclamationTriangle
 } from 'react-icons/fa'; 
-// Lucide icon removed as FaSpinner is used for loading
 
 // --- Themed Notification Component ---
 const Notification = ({ show, message, type, onDismiss }) => {
@@ -37,7 +36,6 @@ const Notification = ({ show, message, type, onDismiss }) => {
 const SkeletonLoader = ({ rows = 3, cols = 5 }) => (
   <div className="animate-pulse p-4">
     {[...Array(rows)].map((_, i) => (
-      // Adjusted grid-cols to match number of data columns + action column
       <div key={i} className={`grid grid-cols-${cols + 1} gap-4 py-3.5 border-b border-[#C8D9E6]/40 items-center`}>
         {[...Array(cols)].map((_, j) => (
           <div key={j} className="h-5 bg-[#C8D9E6]/60 rounded col-span-1"></div>
@@ -76,6 +74,7 @@ export default function EmployeDemandeAttestation() {
   const [attestationTypes, setAttestationTypes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingDemandeId, setSubmittingDemandeId] = useState(null); 
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState('date_demande');
@@ -91,8 +90,8 @@ export default function EmployeDemandeAttestation() {
   });
 
   const MY_DEMANDES_API_URL = 'http://localhost:8000/api/employe/mes-demandes';
-  const ATTESTATION_TYPES_API_URL = 'http://localhost:8000/api/employe/attestations'; // This seems to be for GET types and POST new demande
-  const DEMANDE_API_URL = 'http://localhost:8000/api/employe/attestations'; // Already defined above
+  const ATTESTATION_TYPES_API_URL = 'http://localhost:8000/api/employe/attestations';
+  const DEMANDE_API_URL = 'http://localhost:8000/api/employe/attestations'; 
 
   const getToken = () => localStorage.getItem('employe_token');
 
@@ -114,7 +113,8 @@ export default function EmployeDemandeAttestation() {
         throw new Error(errorData.message || 'Erreur lors de la récupération de vos demandes.');
       }
       const data = await response.json();
-      setMyDemandes(Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []));
+      const demandsData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+      setMyDemandes(demandsData);
     } catch (err) {
       showAppNotification(err.message || 'Impossible de charger vos demandes.', 'error');
       setMyDemandes([]);
@@ -124,15 +124,12 @@ export default function EmployeDemandeAttestation() {
   };
 
   const fetchAttestationTypes = async () => {
-    // Could add a specific loading state for types if it's slow and blocks form
     try {
-      const response = await fetch(ATTESTATION_TYPES_API_URL, { // Assuming this endpoint provides types on GET
+      const response = await fetch(ATTESTATION_TYPES_API_URL, {
         headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept': 'application/json' },
       });
       if (!response.ok) throw new Error('Erreur de chargement des types d\'attestation.');
       const data = await response.json();
-      // Adapt based on how your API returns types.
-      // If /api/employe/attestations on GET returns types:
       setAttestationTypes(Array.isArray(data) ? data : (Array.isArray(data.types) ? data.types : []));
     } catch (err) {
       showAppNotification(err.message || 'Impossible de charger les types d\'attestation.', 'error');
@@ -140,9 +137,13 @@ export default function EmployeDemandeAttestation() {
     }
   };
 
-  useEffect(() => {
+  const refreshAllData = () => {
     fetchMyDemandes();
     fetchAttestationTypes();
+  };
+
+  useEffect(() => {
+    refreshAllData();
   }, []);
 
   const handleChange = (e) => {
@@ -172,7 +173,7 @@ export default function EmployeDemandeAttestation() {
     }
     setIsSubmitting(true);
     try {
-      const response = await fetch(ATTESTATION_TYPES_API_URL, { // POST to the same endpoint for attestations
+      const response = await fetch(ATTESTATION_TYPES_API_URL, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${getToken()}`,
@@ -198,16 +199,14 @@ export default function EmployeDemandeAttestation() {
   const handleDeleteDemande = async (demandeId) => {
     if (!window.confirm('Êtes-vous sûr de vouloir annuler cette demande?')) return;
     setIsSubmitting(true); 
+    setSubmittingDemandeId(demandeId);
     try {
-      // Assuming DELETE request for a specific demande goes to /api/employe/mes-demandes/{id}
-      // or /api/employe/attestations/{id} - adjust API URL if needed.
-      // Using MY_DEMANDES_API_URL for consistency with how they are fetched.
       const response = await fetch(`${DEMANDE_API_URL}/${demandeId}`, { 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept': 'application/json' },
       });
       const responseData = await response.json().catch(() => null);
-      if (!response.ok && response.status !== 204) { 
+      if (!response.ok && response.status !== 204) {
         throw new Error(responseData?.message || responseData?.error || 'Erreur de suppression.');
       }
       showAppNotification(responseData?.message || 'Demande annulée avec succès.', 'success');
@@ -216,6 +215,7 @@ export default function EmployeDemandeAttestation() {
       showAppNotification(err.message || 'Échec de l\'annulation.', 'error');
     } finally {
       setIsSubmitting(false);
+      setSubmittingDemandeId(null);
     }
   };
   
@@ -235,18 +235,25 @@ export default function EmployeDemandeAttestation() {
       return (
         demande.attestation_type?.type?.toLowerCase().includes(searchTermLower) ||
         demande.statut?.toLowerCase().includes(searchTermLower) ||
-        demande.date_demande?.includes(searchTermLower) || // Assuming date format includes searchable parts
-        demande.date_livraison?.includes(searchTermLower)
+        demande.date_demande?.toLowerCase().includes(searchTermLower) || 
+        demande.date_livraison?.toLowerCase().includes(searchTermLower)
       );
     })
     .sort((a, b) => {
       if (!sortField) return 0;
       let valA = sortField.includes('.') ? getNestedValue(a, sortField) : a[sortField];
       let valB = sortField.includes('.') ? getNestedValue(b, sortField) : b[sortField];
-      valA = valA == null ? '' : valA; valB = valB == null ? '' : valB;
+      
+      valA = valA == null ? '' : valA; 
+      valB = valB == null ? '' : valB;
+
       if (sortField === 'date_demande' || sortField === 'date_livraison') {
-        valA = new Date(valA); valB = new Date(valB);
-        return sortDirection === 'asc' ? valA.getTime() - valB.getTime() : valB.getTime() - valA.getTime();
+        const dateA = new Date(valA);
+        const dateB = new Date(valB);
+        if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
+        if (isNaN(dateA.getTime())) return sortDirection === 'asc' ? 1 : -1;
+        if (isNaN(dateB.getTime())) return sortDirection === 'asc' ? -1 : 1;
+        return sortDirection === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
       }
       return sortDirection === 'asc' ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
     });
@@ -256,12 +263,14 @@ export default function EmployeDemandeAttestation() {
     { label: 'Date Demande', field: 'date_demande' },
     { label: 'Livraison Souhaitée', field: 'date_livraison' },
     { label: 'Statut', field: 'statut' },
-    { label: 'Document', field: 'pdf_path' },
+    { label: 'Document', field: 'pdf' }, // <-- Corrected field name here for sorting if needed
   ];
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Date invalide';
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
   };
   
   const inputClasses = "w-full p-2.5 border border-[#C8D9E6] rounded-md focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] transition-colors outline-none text-[#2F4156] bg-white text-sm";
@@ -305,10 +314,10 @@ export default function EmployeDemandeAttestation() {
               />
             </div>
             <div className="flex gap-3 w-full sm:w-auto">
-              <button onClick={fetchMyDemandes} disabled={isLoading || isSubmitting} className={buttonSecondaryClasses}>
-                <FaSync size={16} className={`mr-2 ${isLoading && !isSubmitting ? 'animate-spin' : ''}`} /> Actualiser
+              <button onClick={refreshAllData} disabled={isLoading || isSubmitting} className={buttonSecondaryClasses}>
+                <FaSync size={16} className={`mr-2 ${(isLoading && !isSubmitting) ? 'animate-spin' : ''}`} /> Actualiser
               </button>
-              <button onClick={toggleForm} className={`${showForm ? 'bg-red-500 hover:bg-red-600' : 'bg-[#567C8D] hover:bg-[#4A6582]'} text-white text-sm font-semibold px-4 py-2 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center w-full sm:w-auto`} disabled={isSubmitting}>
+              <button onClick={toggleForm} className={`${showForm ? 'bg-red-500 hover:bg-red-600' : 'bg-[#567C8D] hover:bg-[#4A6582]'} text-white text-sm font-semibold px-4 py-2 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center w-full sm:w-auto`} disabled={isSubmitting && !submittingDemandeId}>
                 {showForm ? <FaTimes size={16} className="mr-2" /> : <FaPlusCircle size={16} className="mr-2" />}
                 {showForm ? 'Annuler' : 'Nouvelle Demande'}
               </button>
@@ -334,8 +343,8 @@ export default function EmployeDemandeAttestation() {
                         <FaChevronDown className="h-4 w-4 text-[#A0B9CD]" />
                     </div>
                   </div>
-                  {attestationTypes.length === 0 && !isLoading && <p className="text-xs text-red-500 mt-1">Aucun type d'attestation disponible.</p>}
-                  {attestationTypes.length === 0 && isLoading && <p className="text-xs text-yellow-600 mt-1">Chargement des types...</p>}
+                  {attestationTypes.length === 0 && !isLoading && <p className="text-xs text-red-500 mt-1">Aucun type d'attestation disponible. Essayez d'actualiser.</p>}
+                  {attestationTypes.length === 0 && isLoading && !(isSubmitting && !submittingDemandeId) && <p className="text-xs text-yellow-600 mt-1">Chargement des types...</p>}
                 </div>
                 <div>
                   <label htmlFor="date_livraison" className="block text-sm font-medium text-[#567C8D] mb-1">Date de Livraison Souhaitée <span className="text-red-500">*</span></label>
@@ -346,7 +355,7 @@ export default function EmployeDemandeAttestation() {
                     <FaTimes size={16} className="mr-2" /> Annuler
                   </button>
                   <button type="submit" disabled={isSubmitting || !formData.type_id || !formData.date_livraison} className={buttonPrimaryClasses}>
-                    {isSubmitting ? <FaSpinner size={18} className="animate-spin mr-2" /> : <FaPaperPlane size={16} className="mr-2" />}
+                    {isSubmitting && !submittingDemandeId ? <FaSpinner size={18} className="animate-spin mr-2" /> : <FaPaperPlane size={16} className="mr-2" />}
                     Envoyer
                   </button>
                 </div>
@@ -391,7 +400,28 @@ export default function EmployeDemandeAttestation() {
                     {sortedAndFilteredDemandes.map((demande) => {
                       const statusDetails = getStatusDetails(demande.statut);
                       const attestationTypeName = demande.attestation_type?.type || 'N/A';
-                      const currentPdfUrl = demande.pdf_path ? `${PDF_STORAGE_BASE_URL}${demande.pdf_path}` : null;
+                      
+                      // ***** CORRECTED LINE *****
+                      const rawPdfPath = demande.pdf; 
+                      // ***** END CORRECTION *****
+                      
+                      let currentPdfUrl = null;
+
+                      if (rawPdfPath && String(rawPdfPath).trim() !== '' && String(rawPdfPath).trim() !== '/') {
+                          let pathSegment = String(rawPdfPath).trim();
+                          
+                          if (pathSegment.startsWith('http://') || pathSegment.startsWith('https://')) {
+                              currentPdfUrl = pathSegment;
+                          } else {
+                              const baseUrl = PDF_STORAGE_BASE_URL.endsWith('/') ? PDF_STORAGE_BASE_URL : `${PDF_STORAGE_BASE_URL}/`;
+                              if (pathSegment.startsWith('/')) {
+                                  pathSegment = pathSegment.substring(1);
+                              }
+                              if (pathSegment !== '') {
+                                  currentPdfUrl = `${baseUrl}${pathSegment}`;
+                              }
+                          }
+                      }
 
                       return (
                         <tr key={demande.id} className="hover:bg-[#C8D9E6]/20 transition-colors duration-150">
@@ -413,8 +443,13 @@ export default function EmployeDemandeAttestation() {
                           </td>
                           <td className="py-3 px-4 text-center">
                             {(demande.statut?.toLowerCase() === 'en attente' || demande.statut === null) && (
-                              <button onClick={() => handleDeleteDemande(demande.id)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-md transition-colors" title="Annuler la Demande" disabled={isSubmitting}>
-                                {isSubmitting ? <FaSpinner className="animate-spin" size={16}/> : <FaTrashAlt size={16} />}
+                              <button 
+                                onClick={() => handleDeleteDemande(demande.id)} 
+                                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-md transition-colors" 
+                                title="Annuler la Demande" 
+                                disabled={isSubmitting}
+                              >
+                                {isSubmitting && submittingDemandeId === demande.id ? <FaSpinner className="animate-spin" size={16}/> : <FaTrashAlt size={16} />}
                               </button>
                             )}
                             {demande.statut?.toLowerCase() !== 'en attente' && demande.statut !== null && (
