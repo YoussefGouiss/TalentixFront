@@ -428,9 +428,9 @@ export default function Employee() {
               <thead>
                 <tr className="bg-[#C8D9E6]/30">
                   {/* Table Headers */}
-                  {['nom', 'prénom', 'email', 'téléphone', 'poste', 'date_entree', 'salaire'].map(fieldKey => {
+                  {['nom', 'prenom', 'email', 'telephone', 'poste', 'date_entree', 'salaire'].map(fieldKey => {
                     const displayHeader = {
-                        nom: 'Nom', prenom: 'Prénom', email: 'Email', telephone: 'Téléphone',
+                        nom: 'Nom', prenom:'Prenom', email: 'Email', telephone: 'telephone',
                         poste: 'Poste', date_entree: "Date d'entrée", salaire: 'Salaire'
                     }[fieldKey];
                     const isHiddenSm = ['email', 'téléphone', 'salaire', 'date_entree'].includes(fieldKey);
