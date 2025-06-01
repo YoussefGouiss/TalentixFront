@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaSpinner,
-  FaPlus, FaEdit, FaTrashAlt, FaDollarSign, FaUserTag, FaCalendarAlt, FaTimes,FaUsers // Added FaUsers
+  FaPlus, FaEdit, FaTrashAlt, FaDollarSign, FaUserTag, FaCalendarAlt, FaTimes,FaUsers
 } from 'react-icons/fa';
 
-// ... (Keep Notification, SkeletonLoader, Modal components as before) ...
 // --- Start of Re-usable Components (if not imported) ---
 const Notification = ({ show, message, type, onDismiss }) => {
   if (!show && !message) return null;
@@ -64,10 +63,6 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }) => {
 };
 // --- End of Re-usable Components ---
 
-
-// ... (imports and other component code remain the same) ...
-// ... (Notification, SkeletonLoader, Modal components) ...
-
 const API_URL = 'http://localhost:8000/api/admin';
 
 const initialPrimeFormState = {
@@ -82,13 +77,12 @@ const initialAttributionFormState = {
     employe_id: '',
     prime_id: '',
     date_attribution: new Date().toISOString().split('T')[0],
-    montant: '', // This will now be auto-populated
+    montant: '', // Sera toujours déterminé par la prime sélectionnée
     remarque: ''
 };
 
 
 export default function PrimesAdmin() {
-  // ... (All state variables: primes, isLoadingPrimes, etc., employeesList, etc. remain the same) ...
   const [primes, setPrimes] = useState([]);
   const [isLoadingPrimes, setIsLoadingPrimes] = useState(true);
   const [primeError, setPrimeError] = useState(null);
@@ -96,7 +90,6 @@ export default function PrimesAdmin() {
   const [currentPrime, setCurrentPrime] = useState(initialPrimeFormState);
   const [isSubmittingPrime, setIsSubmittingPrime] = useState(false);
 
-  // Prime Attributions
   const [attributions, setAttributions] = useState([]);
   const [isLoadingAttributions, setIsLoadingAttributions] = useState(true);
   const [attributionError, setAttributionError] = useState(null);
@@ -104,13 +97,10 @@ export default function PrimesAdmin() {
   const [currentAttribution, setCurrentAttribution] = useState(initialAttributionFormState);
   const [isSubmittingAttribution, setIsSubmittingAttribution] = useState(false);
 
-  // Employees List for Dropdown
   const [employeesList, setEmployeesList] = useState([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
 
-  // General
   const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
-
 
   const getAdminToken = () => localStorage.getItem('admin_token');
 
@@ -174,17 +164,14 @@ export default function PrimesAdmin() {
   const handlePrimeSubmit = async (e) => {
     e.preventDefault();
     setIsSubmittingPrime(true);
-    // ... (rest of the function remains the same)
     const token = getAdminToken();
     if (!token) {
       showAppNotification('Administrateur non authentifié.', 'error');
       setIsSubmittingPrime(false);
       return;
     }
-
     const url = currentPrime.id ? `${API_URL}/primes/${currentPrime.id}` : `${API_URL}/primes`;
     const method = currentPrime.id ? 'PUT' : 'POST';
-
     try {
       const response = await fetch(url, {
         method,
@@ -201,7 +188,6 @@ export default function PrimesAdmin() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || `Erreur ${currentPrime.id ? 'modification' : 'création'} prime.`);
-      
       showAppNotification(data.message || `Prime ${currentPrime.id ? 'modifiée' : 'créée'} avec succès.`, 'success');
       setShowPrimeModal(false);
       fetchPrimes();
@@ -213,10 +199,8 @@ export default function PrimesAdmin() {
   };
 
   const handleDeletePrime = async (primeId) => {
-    // ... (function remains the same)
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette prime ? Cette action est irréversible.")) return;
-    
-    setIsSubmittingPrime(true); 
+    setIsSubmittingPrime(true);
     const token = getAdminToken();
     if (!token) {
       showAppNotification('Administrateur non authentifié.', 'error');
@@ -240,14 +224,12 @@ export default function PrimesAdmin() {
   };
 
   const fetchAttributions = useCallback(async () => {
-    // ... (function remains the same)
     setIsLoadingAttributions(true);
     setAttributionError(null);
     try {
       const token = getAdminToken();
       if (!token) throw new Error('Administrateur non authentifié.');
-      
-      const response = await fetch(`${API_URL}/prime-attributions`, { 
+      const response = await fetch(`${API_URL}/prime-attributions`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
       if (!response.ok) throw new Error((await response.json()).message || 'Erreur chargement des attributions.');
@@ -255,61 +237,62 @@ export default function PrimesAdmin() {
       setAttributions(Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []));
     } catch (err) {
       setAttributionError(err.message);
-      console.error("Error fetching attributions (ensure /api/admin/prime-attributions exists):", err.message);
-      setAttributions([]); 
+      console.error("Error fetching attributions:", err.message);
+      setAttributions([]);
     } finally {
       setIsLoadingAttributions(false);
     }
   }, []);
 
+  // MODIFIED: handleOpenAttributionModal
   const handleOpenAttributionModal = (attribution = null) => {
     if (!employeesList.length && !isLoadingEmployees) {
-        fetchEmployees();
+        fetchEmployees(); // Fetch if not already loaded
     }
     if (attribution) { // Editing existing attribution
+        const primeIdForAttribution = attribution.prime_id?.toString() || attribution.prime?.id?.toString() || '';
+        const selectedPrime = primes.find(p => p.id === parseInt(primeIdForAttribution));
+
         setCurrentAttribution({
             id: attribution.id,
             employe_id: attribution.employe_id?.toString() || attribution.employe?.id?.toString() || '',
-            prime_id: attribution.prime_id?.toString() || attribution.prime?.id?.toString() || '',
+            prime_id: primeIdForAttribution,
             date_attribution: attribution.date_attribution ? new Date(attribution.date_attribution).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            montant: attribution.montant?.toString() || '', // Keep existing montant when editing
+            // Montant est DÉTERMINÉ par la prime sélectionnée.
+            // Si la prime existe, on prend son montant. Sinon, on vide (ou on pourrait garder l'ancien si la prime n'est plus valide mais c'est moins cohérent).
+            montant: selectedPrime ? selectedPrime.montant.toString() : '',
             remarque: attribution.remarque || ''
         });
     } else { // Adding new attribution
-        setCurrentAttribution(initialAttributionFormState); // Reset to initial, montant will be empty
+        setCurrentAttribution({
+            ...initialAttributionFormState, // Reset to initial, montant will be empty
+            date_attribution: new Date().toISOString().split('T')[0], // Assure une date par défaut
+        });
     }
     setShowAttributionModal(true);
   };
 
+  // MODIFIED: handleAttributionFormChange
   const handleAttributionFormChange = (e) => {
     const { name, value } = e.target;
     setCurrentAttribution(prev => {
         const newState = { ...prev, [name]: value };
-        // If prime_id changes, and we are not editing (or montant is not already set by user), auto-fill montant
+
+        // Si prime_id change, mettre à jour automatiquement le montant.
         if (name === 'prime_id') {
             const selectedPrime = primes.find(p => p.id === parseInt(value));
             if (selectedPrime) {
-                // Only autofill if it's a new attribution or if the existing one doesn't have a specific montant set yet.
-                // Or, always autofill when prime_id changes, letting the user override if needed.
-                // For simplicity, let's always autofill when prime_id changes for a new record,
-                // or if the current montant is empty/matches a previous prime's default.
-                // For editing, we typically want to keep the user's specific amount.
-                // So, we'll auto-fill primarily for new entries or if the montant field is currently empty.
-                if (!prev.id || prev.montant === '' || (prev.prime_id && primes.find(p => p.id === parseInt(prev.prime_id))?.montant.toString() === prev.montant)) {
-                    newState.montant = selectedPrime.montant.toString();
-                }
+                newState.montant = selectedPrime.montant.toString();
             } else {
-                 if (!prev.id || prev.montant === '') { // If prime deselected or invalid, clear montant for new/empty
-                    newState.montant = '';
-                 }
+                newState.montant = ''; // Si aucune prime n'est sélectionnée ou valide, vider le montant
             }
         }
+        // Le champ 'montant' est readOnly, donc il ne déclenchera pas de onChange pour sa propre valeur.
         return newState;
     });
   };
 
   const handleAttributionSubmit = async (e) => {
-    // ... (function largely remains the same, ensure payload is correct) ...
     e.preventDefault();
     setIsSubmittingAttribution(true);
     const token = getAdminToken();
@@ -321,28 +304,45 @@ export default function PrimesAdmin() {
 
     const selectedEmployee = employeesList.find(emp => emp.id === parseInt(currentAttribution.employe_id));
 
-    if (!selectedEmployee && !currentAttribution.id) {
+    // S'assurer qu'un montant est bien défini (via la sélection de prime)
+    if (!currentAttribution.montant || parseFloat(currentAttribution.montant) <= 0) {
+        showAppNotification("Veuillez sélectionner une prime valide (avec un montant).", 'warning');
+        setIsSubmittingAttribution(false);
+        return;
+    }
+    if (!selectedEmployee && !currentAttribution.id) { // Pour une nouvelle attribution, l'employé est requis
         showAppNotification("Veuillez sélectionner un employé.", 'warning');
         setIsSubmittingAttribution(false);
         return;
     }
     
     const payload = {
-        nom: selectedEmployee ? selectedEmployee.nom : null,
+        // Pour une nouvelle attribution, inclure nom/prenom de l'employé si disponible
+        // Pour une édition, le backend pourrait s'attendre à ne pas recevoir nom/prenom si employe_id est juste mis à jour
+        // ou pourrait les ignorer si employe_id est présent. Ici, on envoie ce qu'on a.
+        employe_id: parseInt(currentAttribution.employe_id), // Assurez-vous que votre backend attend employe_id
+        nom: selectedEmployee ? selectedEmployee.nom : null, 
         prenom: selectedEmployee ? selectedEmployee.prenom : null,
         prime_id: parseInt(currentAttribution.prime_id),
         date_attribution: currentAttribution.date_attribution,
-        montant: parseFloat(currentAttribution.montant),
+        montant: parseFloat(currentAttribution.montant), // Le montant est maintenant fixe
         remarque: currentAttribution.remarque
     };
     
-    if (currentAttribution.id && !selectedEmployee) {
-      delete payload.nom;
-      delete payload.prenom;
-    } else if (!selectedEmployee && currentAttribution.id) {
+    // Si on modifie et qu'on n'a pas l'objet employé complet (rare si on recharge bien les listes)
+    // ou si le backend ne veut pas de nom/prenom en édition, on peut les supprimer.
+    // Pour la route /primes/attribuer (POST), le backend Laravel attend nom, prenom, prime_id, ...
+    // Pour la route /prime-attributions/{id} (PUT), il attend employe_id, prime_id, ...
+    if (currentAttribution.id) { // Si c'est une modification (PUT)
         delete payload.nom;
         delete payload.prenom;
+        if (!selectedEmployee) { // Si l'employé n'est pas trouvé pour une raison quelconque lors de l'édition
+             // On pourrait vouloir laisser l'employe_id tel quel sans envoyer nom/prenom
+        }
+    } else if (!selectedEmployee) { // Si c'est une création (POST) et pas d'employé
+        // Cette situation est déjà gérée par la validation plus haut
     }
+
 
     const url = currentAttribution.id ? `${API_URL}/prime-attributions/${currentAttribution.id}` : `${API_URL}/primes/attribuer`;
     const method = currentAttribution.id ? 'PUT' : 'POST';
@@ -377,9 +377,7 @@ export default function PrimesAdmin() {
   };
 
   const handleDeleteAttribution = async (attributionId) => {
-    // ... (function remains the same)
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette attribution de prime ?")) return;
-    
     setIsSubmittingAttribution(true);
     const token = getAdminToken();
     if (!token) {
@@ -407,10 +405,9 @@ export default function PrimesAdmin() {
     fetchPrimes();
     fetchAttributions();
     fetchEmployees();
-  }, [fetchPrimes, fetchAttributions, fetchEmployees]);
+  }, [fetchPrimes, fetchAttributions, fetchEmployees]); // Dependencies for re-fetching
 
   const formatDate = (dateString) => {
-    // ... (function remains the same)
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('fr-FR', {
       year: 'numeric', month: 'short', day: 'numeric'
@@ -418,13 +415,11 @@ export default function PrimesAdmin() {
   };
 
   const formatCurrency = (amount) => {
-    // ... (function remains the same)
     if (typeof amount !== 'number' && typeof amount !== 'string') return 'N/A';
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount)) return 'N/A';
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(numAmount);
   };
-
 
   return (
     <div className="min-h-screen bg-[#F5EFEB]">
@@ -435,7 +430,6 @@ export default function PrimesAdmin() {
         onDismiss={() => setNotification(prev => ({ ...prev, show: false }))} 
       />
       
-      {/* Header and Prime Definitions Section (largely unchanged) */}
       <div className="bg-[#F5EFEB]/80 border-b border-[#C8D9E6] shadow-sm">
         <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6">
           <h1 className="text-2xl font-bold tracking-tight text-[#2F4156]">Gestion des Primes</h1>
@@ -493,7 +487,7 @@ export default function PrimesAdmin() {
             </div>
         </section>
 
-        {/* Section: Prime Attributions (largely unchanged) */}
+        {/* Section: Prime Attributions */}
         <section>
             <div className="mb-4 flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-[#2F4156]">Attributions des Primes</h2>
@@ -551,7 +545,6 @@ export default function PrimesAdmin() {
         </section>
 
       </main>
-      {/* Footer (unchanged) */}
       <div className="border-t border-[#C8D9E6] bg-[#F5EFEB]/80">
         <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-center text-xs text-[#567C8D]">
             Interface Administrateur Primes © {new Date().getFullYear()}
@@ -595,7 +588,7 @@ export default function PrimesAdmin() {
         </form>
       </Modal>
 
-      {/* Prime Attribution Modal - MODIFIED for auto-montant */}
+      {/* MODIFIED: Prime Attribution Modal - Montant is readOnly and auto-filled */}
       <Modal isOpen={showAttributionModal} onClose={() => setShowAttributionModal(false)} title={currentAttribution.id ? "Modifier l'Attribution" : "Attribuer une Prime"} maxWidth="max-w-xl">
         <form onSubmit={handleAttributionSubmit} className="space-y-4">
             <div>
@@ -604,11 +597,11 @@ export default function PrimesAdmin() {
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <FaUsers className="h-5 w-5 text-gray-400" />
                     </div>
-                    <select 
-                        name="employe_id" 
-                        id="attr-employe-id" 
-                        value={currentAttribution.employe_id} 
-                        onChange={handleAttributionFormChange} 
+                    <select
+                        name="employe_id"
+                        id="attr-employe-id"
+                        value={currentAttribution.employe_id}
+                        onChange={handleAttributionFormChange}
                         required
                         disabled={isLoadingEmployees}
                         className="w-full p-2.5 pl-10 border border-[#C8D9E6] rounded-md shadow-sm focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] text-[#2F4156] bg-white appearance-none"
@@ -625,15 +618,14 @@ export default function PrimesAdmin() {
                 </div>
                 {isLoadingEmployees && <FaSpinner className="animate-spin text-sm text-[#567C8D] mt-1" />}
             </div>
-            
-            {/* Type de Prime - onChange triggers montant update */}
+
             <div>
                 <label htmlFor="attr-prime-id" className="block text-sm font-medium text-[#2F4156] mb-1">Type de Prime</label>
-                <select 
-                    name="prime_id" 
-                    id="attr-prime-id" 
-                    value={currentAttribution.prime_id} 
-                    onChange={handleAttributionFormChange} // This now updates montant
+                <select
+                    name="prime_id"
+                    id="attr-prime-id"
+                    value={currentAttribution.prime_id}
+                    onChange={handleAttributionFormChange} // This updates montant
                     required
                     className="w-full p-2.5 border border-[#C8D9E6] rounded-md shadow-sm focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] text-[#2F4156] bg-white"
                 >
@@ -649,16 +641,16 @@ export default function PrimesAdmin() {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <FaDollarSign className="h-5 w-5 text-gray-400" />
                         </div>
-                        <input 
-                            type="number" 
-                            name="montant" 
-                            id="attr-montant" 
-                            value={currentAttribution.montant} // Value is now managed by state, auto-filled
-                            onChange={handleAttributionFormChange} 
-                            required 
-                            min="0" 
+                        <input
+                            type="number"
+                            name="montant"
+                            id="attr-montant"
+                            value={currentAttribution.montant} // Géré par l'état, auto-rempli
+                            readOnly // Empêche la modification par l'utilisateur
+                            required // Toujours requis pour la soumission
+                            min="0"
                             step="0.01"
-                            className="w-full p-2.5 pl-10 border border-[#C8D9E6] rounded-md shadow-sm focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] text-[#2F4156]"
+                            className="w-full p-2.5 pl-10 border border-[#C8D9E6] rounded-md shadow-sm focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] text-[#2F4156] bg-gray-100 cursor-not-allowed" // Style pour readOnly
                         />
                     </div>
                 </div>
@@ -674,16 +666,28 @@ export default function PrimesAdmin() {
                 </div>
             </div>
 
-
+            <div>
+                <label htmlFor="attr-remarque" className="block text-sm font-medium text-[#2F4156] mb-1">Remarque (optionnel)</label>
+                <textarea name="remarque" id="attr-remarque" value={currentAttribution.remarque} onChange={handleAttributionFormChange} rows="2"
+                          className="w-full p-2.5 border border-[#C8D9E6] rounded-md shadow-sm focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] text-[#2F4156]"></textarea>
+            </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-[#C8D9E6]">
                 <button type="button" onClick={() => setShowAttributionModal(false)} disabled={isSubmittingAttribution}
                         className="px-4 py-2 bg-[#E2E8F0] hover:bg-[#CBD5E1] text-[#2F4156] rounded-md transition-colors font-medium text-sm disabled:opacity-70">
                     Annuler
                 </button>
-                <button 
-                    type="submit" 
-                    disabled={isSubmittingAttribution || !currentAttribution.employe_id || !currentAttribution.prime_id || !currentAttribution.montant || !currentAttribution.date_attribution || isLoadingEmployees}
+                <button
+                    type="submit"
+                    disabled={
+                        isSubmittingAttribution ||
+                        !currentAttribution.employe_id ||
+                        !currentAttribution.prime_id ||
+                        !currentAttribution.montant || // S'assurer qu'un montant est défini
+                        parseFloat(currentAttribution.montant) <= 0 || // S'assurer que le montant est positif
+                        !currentAttribution.date_attribution ||
+                        isLoadingEmployees
+                    }
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md shadow-sm transition-colors font-semibold text-sm flex items-center disabled:opacity-60">
                     {isSubmittingAttribution ? <FaSpinner className="animate-spin mr-2" /> : (currentAttribution.id ? <FaCheckCircle className="mr-2"/> : <FaUserTag className="mr-2"/>)}
                     {currentAttribution.id ? "Enregistrer Modifications" : "Attribuer Prime"}

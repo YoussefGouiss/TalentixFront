@@ -253,25 +253,16 @@ export default function EmployePrimes() {
                             <p className="text-md font-medium text-[#2F4156]">{formatDate(prime.date_attribution)}</p>
                         </div>
                     </div>
-
-                    {prime.description && ( // From primes.description
+                    {prime.remarques && ( // From primes.remarque
                          <div className="flex items-start col-span-1 md:col-span-2 mt-2 pt-3 border-t border-[#C8D9E6]/40">
                             <FaInfoCircle className="text-purple-600 mr-3 h-5 w-5 flex-shrink-0 mt-1" />
                             <div>
-                                <p className="text-xs text-gray-500 uppercase font-medium">Description de la Prime</p>
-                                <p className="text-sm text-[#2F4156]">{prime.description}</p>
+                                <p className="text-xs text-gray-500 uppercase font-medium">Remarque</p>
+                                <p className="text-sm text-[#2F4156]">{prime.remarques}</p>
                             </div>
                         </div>
                     )}
-                    {prime.remarque && ( // From prime_employe.remarque
-                        <div className={`flex items-start col-span-1 md:col-span-2 mt-2 pt-3 ${prime.description ? '' : 'border-t border-[#C8D9E6]/40'}`}>
-                            <FaInfoCircle className="text-orange-500 mr-3 h-5 w-5 flex-shrink-0 mt-1" />
-                            <div>
-                                <p className="text-xs text-gray-500 uppercase font-medium">Remarque de l'Administration</p>
-                                <p className="text-sm text-[#2F4156] italic">{prime.remarque}</p>
-                            </div>
-                        </div>
-                    )}
+                
                 </div>
               </div>
             ))}
