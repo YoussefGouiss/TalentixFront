@@ -666,11 +666,7 @@ export default function PrimesAdmin() {
                 </div>
             </div>
 
-            <div>
-                <label htmlFor="attr-remarque" className="block text-sm font-medium text-[#2F4156] mb-1">Remarque (optionnel)</label>
-                <textarea name="remarque" id="attr-remarque" value={currentAttribution.remarque} onChange={handleAttributionFormChange} rows="2"
-                          className="w-full p-2.5 border border-[#C8D9E6] rounded-md shadow-sm focus:ring-1 focus:ring-[#567C8D] focus:border-[#567C8D] text-[#2F4156]"></textarea>
-            </div>
+        
 
             <div className="flex justify-end gap-3 pt-4 border-t border-[#C8D9E6]">
                 <button type="button" onClick={() => setShowAttributionModal(false)} disabled={isSubmittingAttribution}

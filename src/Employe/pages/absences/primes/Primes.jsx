@@ -253,16 +253,7 @@ export default function EmployePrimes() {
                             <p className="text-md font-medium text-[#2F4156]">{formatDate(prime.date_attribution)}</p>
                         </div>
                     </div>
-                    {prime.remarques && ( // From primes.remarque
-                         <div className="flex items-start col-span-1 md:col-span-2 mt-2 pt-3 border-t border-[#C8D9E6]/40">
-                            <FaInfoCircle className="text-purple-600 mr-3 h-5 w-5 flex-shrink-0 mt-1" />
-                            <div>
-                                <p className="text-xs text-gray-500 uppercase font-medium">Remarque</p>
-                                <p className="text-sm text-[#2F4156]">{prime.remarques}</p>
-                            </div>
-                        </div>
-                    )}
-                
+                   
                 </div>
               </div>
             ))}
@@ -272,7 +263,7 @@ export default function EmployePrimes() {
 
        <div className="border-t border-[#C8D9E6] bg-[#F5EFEB]/80 mt-10">
          <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-center text-xs text-[#567C8D]">
-            Espace Primes Employé © {new Date().getFullYear()}
+            Espace Primes Employé {new Date().getFullYear()}
         </footer>
       </div>
     </div>
