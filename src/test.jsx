@@ -3,7 +3,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   FaUserCircle, FaHome, FaUsers, FaClock, FaCalendarAlt, FaBookOpen,
   FaFileInvoiceDollar, FaBriefcase, FaFileContract, FaExchangeAlt, FaFileAlt,
-  FaAngleUp, FaAngleDown, FaSignOutAlt, FaUserEdit
+  FaAngleUp, FaAngleDown, FaSignOutAlt, FaUserEdit,
+  FaMoneyBill
 } from 'react-icons/fa';
 import { Link, useLocation, useNavigate } from 'react-router-dom'; // Import useNavigate
 
@@ -26,7 +27,8 @@ const TestSidebar = () => {
     { id: "Formation", icon: <FaBookOpen />, text: "Formation", route: "/admin/formation" },
     { id: "paie", icon: <FaFileInvoiceDollar />, text: "Fiches de paie", route: "/admin/FichePaie" },
     { id: "Recrutements", icon: <FaBriefcase />, text: "Recrutements", route: "/admin/recrutements" },
-    { id: "AttestationTypes", icon: <FaFileAlt />, text: "Attestations.", route: "/admin/attestations" }, // For managing types
+    { id: "AttestationTypes", icon: <FaFileAlt />, text: "Attestations.", route: "/admin/attestations" },
+    { id: "primes", icon: <FaMoneyBill />, text: "Primes", route: "/admin/primes" },
   ];
 
   const getActiveItem = () => {
