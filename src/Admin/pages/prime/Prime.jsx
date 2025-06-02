@@ -666,7 +666,7 @@ export default function PrimesAdmin() {
                 </div>
             </div>
 
-        
+        ù
 
             <div className="flex justify-end gap-3 pt-4 border-t border-[#C8D9E6]">
                 <button type="button" onClick={() => setShowAttributionModal(false)} disabled={isSubmittingAttribution}

@@ -31,6 +31,8 @@ import AbsenceEmploye from './Employe/pages/absences/AbsenceEmploye';
 import WelcomPageTest from './WelcomPage';
 import PrimesAdmin from './Admin/pages/prime/Prime';
 import EmployePrimes from './Employe/pages/absences/primes/Primes';
+import EmployeRemboursements from './Employe/pages/remboursement/Remboursement';
+import AdminRemboursementList from './Admin/pages/rembourcement/Rembourcement';
  const route = createBrowserRouter([
         {
             path :'/',
@@ -105,6 +107,10 @@ import EmployePrimes from './Employe/pages/absences/primes/Primes';
                     path : 'primes',
                     element : <PrimesAdmin/>
                 },
+                 {
+                    path : 'remboursements',
+                    element : <AdminRemboursementList/>
+                },
                
                
                 
@@ -130,7 +136,7 @@ import EmployePrimes from './Employe/pages/absences/primes/Primes';
                     path : 'attestations',
                     element  : <EmployeDemandeAttestation/>
                 },
-                 {
+                {
                     path : 'conges',
                     element  : <Conge/>
                 },
@@ -141,6 +147,10 @@ import EmployePrimes from './Employe/pages/absences/primes/Primes';
                 {
                     path : 'primes',
                     element  : <EmployePrimes/>
+                },
+                {
+                    path : 'remboursements',
+                    element  : <EmployeRemboursements/>
                 },
             ]
         }

@@ -8,6 +8,8 @@ import {
   FileCheck,
   Briefcase,
   Banknote,
+  Wallet
+
   // LogOut as LucideLogOut, // No longer needed if we use FaSignOutAlt
 } from "lucide-react";
 import { FaAngleUp, FaAngleDown, FaSignOutAlt, FaUserCircle } from 'react-icons/fa'; // Added FaUserCircle, FaSignOutAlt
@@ -31,6 +33,8 @@ export default function SidebarEmploye() {
     { id: "Attestations", icon: <FileCheck size={22} />, text: "Attestations", route: "/employe/attestations" },
     { id: "Materiel", icon: <Briefcase size={22} />, text: "Matériel", route: "/employe/material" },
     { id: "primes", icon: <Banknote size={22} />, text: "primes", route: "/employe/primes" },
+    { id: "remboursements", icon: <Wallet size={22} />, text: "remboursements", route: "/employe/remboursements" },
+
   ];
 
   const getActiveItem = () => {

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   FaExclamationCircle, FaCheck, FaTimes, FaFileAlt, FaEnvelope, FaPhone, FaUser, FaCalendarAlt,
-  FaSpinner, FaCheckCircle, FaTimesCircle, FaEye, FaArrowLeft, FaUserTie // Added FaUserTie for avatar
-} from 'react-icons/fa'; // Updated icons
+  FaSpinner, FaCheckCircle, FaTimesCircle, FaEye, FaArrowLeft, FaUserTie
+} from 'react-icons/fa';
 
 // Re-using the ThemedNotification
 const ThemedNotification = ({ message, type, show, onDismiss }) => {
@@ -84,15 +84,15 @@ const RejectionModal = ({ isOpen, onClose, title, children, onSubmit, justificat
 };
 
 
-export default function DemandeCondidateur() {
+export default function DemandeCondidateur() { // <<< Make sure this line is correct
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [justification, setJustification] = useState("");
-  const [actionStatus, setActionStatus] = useState({ type: '', message: '' }); // Combined success/error for notification
-  const [isSubmitting, setIsSubmitting] = useState(false); // For modal submit button
+  const [actionStatus, setActionStatus] = useState({ type: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState("list");
 
   const API_URL = "http://localhost:8000/api/admin/condidateurs";
@@ -127,7 +127,7 @@ export default function DemandeCondidateur() {
       }
       const data = await response.json();
       setCandidates(Array.isArray(data) ? data : []);
-    } catch (err) {
+    } catch (err) { // Corrected: was missing opening brace {
       setError(err.message);
       setCandidates([]);
     } finally {
@@ -135,13 +135,18 @@ export default function DemandeCondidateur() {
     }
   };
 
-  const updateCandidateStatus = async (id, status) => {
+    const updateCandidateStatus = async (id, status) => {
     setIsSubmitting(true);
-    setError(null);
-    setActionStatus({ type: '', message: '' });
+    setActionStatus({ type: '', message: '' }); 
+
     try {
       const payload = { statut: status };
       if (status === "rejete") {
+        if (!justification.trim()) {
+          setActionStatus({ type: "error", message: "La justification est requise pour le rejet." });
+          setIsSubmitting(false);
+          return;
+        }
         payload.justification = justification;
       }
 
@@ -155,38 +160,59 @@ export default function DemandeCondidateur() {
         body: JSON.stringify(payload),
       });
 
-      const responseData = await response.json();
+      const responseData = await response.json().catch(() => ({ message: "Réponse invalide du serveur." }));
+      
+      // It's still good to keep this log for future debugging if needed
+      // console.log(`API Update Response for ID ${id} (Status: ${response.status}):`, responseData);
+
       if (!response.ok) {
-        throw new Error(responseData.message || "Échec de la mise à jour du statut.");
+        throw new Error(responseData.message || `Échec de la mise à jour du statut (HTTP ${response.status}).`);
       }
 
-      // Update local state
-      const updatedCandidates = candidates.map((candidate) =>
-        candidate.id === id
-          ? { ...responseData } // Use data from API response for full update
-          : candidate
+      // --- State Update Logic ---
+      setCandidates(prevCandidates =>
+        prevCandidates.map(candidate => {
+          if (candidate.id === id) {
+            // Merge existing candidate data with the (potentially partial) response data
+            return { ...candidate, ...responseData }; // <<< MODIFIED HERE
+          }
+          return candidate;
+        })
       );
-      setCandidates(updatedCandidates);
-      
-      // Update selectedCandidate if it's the one being updated
+
+      // Update selectedCandidate if it's the one being updated and currently selected
       if (selectedCandidate && selectedCandidate.id === id) {
-          setSelectedCandidate({ ...responseData });
+        setSelectedCandidate(prevSelected => {
+          if (prevSelected && prevSelected.id === id) {
+            // Merge existing selected candidate data with the (potentially partial) response data
+            return { ...prevSelected, ...responseData }; // <<< MODIFIED HERE
+          }
+          return prevSelected; 
+        });
       }
 
       setActionStatus({ type: "success", message: `Candidat ${status === 'accepte' ? 'accepté(e)' : 'rejeté(e)'} avec succès` });
-      setShowRejectionModal(false);
-      setJustification("");
+      
+      if (showRejectionModal && status === "rejete") {
+        setShowRejectionModal(false);
+      }
+      if (status === "rejete") { 
+        setJustification("");
+      }
+
     } catch (err) {
-      setActionStatus({ type: "error", message: err.message });
+      console.error("Error updating candidate status:", err);
+      setActionStatus({ type: "error", message: err.message || "Une erreur est survenue lors de la mise à jour." });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+
   const handleStatusChange = (candidate, status) => {
-    setSelectedCandidate(candidate); // Ensure selectedCandidate is set for modal
+    setSelectedCandidate(candidate);
     if (status === "rejete") {
-      setJustification(candidate.justification || ""); // Pre-fill if exists
+      setJustification(candidate.justification || ""); 
       setShowRejectionModal(true);
     } else {
       updateCandidateStatus(candidate.id, status);
@@ -206,21 +232,27 @@ export default function DemandeCondidateur() {
   };
 
   const getStatusBadgeClass = (status) => {
-    // Themed badge styles
     switch (status) {
       case "accepte":
         return "text-green-700 bg-green-100 border-green-300";
       case "rejete":
         return "text-red-700 bg-red-100 border-red-300";
-      default: // en attente
+      default: 
         return "text-yellow-700 bg-yellow-100 border-yellow-300";
     }
+  };
+
+  const formatStatusText = (status) => {
+    if (typeof status === 'string' && status.length > 0) {
+      return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+    return 'Non défini'; 
   };
 
   const viewCandidate = (candidate) => {
     setSelectedCandidate(candidate);
     setViewMode("detail");
-    window.scrollTo(0,0); // Scroll to top when viewing details
+    window.scrollTo(0,0);
   };
 
   const MainContent = () => {
@@ -264,7 +296,7 @@ export default function DemandeCondidateur() {
                 <p className="text-sm text-[#567C8D]">{selectedCandidate.poste_candidate || 'Poste non spécifié'}</p>
               </div>
               <span className={`mt-2 sm:mt-0 inline-block px-3 py-1.5 text-xs font-semibold rounded-full border ${getStatusBadgeClass(selectedCandidate.statut)}`}>
-                {selectedCandidate.statut.charAt(0).toUpperCase() + selectedCandidate.statut.slice(1)}
+                {formatStatusText(selectedCandidate.statut)}
               </span>
             </div>
             
@@ -326,7 +358,7 @@ export default function DemandeCondidateur() {
                 </button>
                 <button
                   className="flex items-center justify-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-md shadow-sm transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
-                  onClick={() => handleStatusChange(selectedCandidate, "rejete")} // This opens the modal
+                  onClick={() => handleStatusChange(selectedCandidate, "rejete")}
                   disabled={isSubmitting}
                 >
                   <FaTimes size={16} className="mr-2" /> Rejeter
@@ -388,7 +420,7 @@ export default function DemandeCondidateur() {
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusBadgeClass(candidate.statut)}`}>
-                          {candidate.statut.charAt(0).toUpperCase() + candidate.statut.slice(1)}
+                          {formatStatusText(candidate.statut)}
                         </span>
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap text-sm">
@@ -428,12 +460,11 @@ export default function DemandeCondidateur() {
     );
   };
 
-
   return (
     <>
       <ThemedNotification 
         message={actionStatus.message} 
-        type={actionStatus.type || 'info'} // Default to info if type is not set
+        type={actionStatus.type || 'info'}
         show={!!actionStatus.message} 
         onDismiss={() => setActionStatus({ type: '', message: '' })}
       />
@@ -456,7 +487,7 @@ export default function DemandeCondidateur() {
         onClose={() => {
           setShowRejectionModal(false);
           setJustification("");
-          setSelectedCandidate(null); // Clear selected candidate when closing modal without action
+          setSelectedCandidate(null);
         }}
         title="Justification du Rejet"
         onSubmit={handleSubmitRejection}

@@ -4,7 +4,7 @@ import {
   FaUserCircle, FaHome, FaUsers, FaClock, FaCalendarAlt, FaBookOpen,
   FaFileInvoiceDollar, FaBriefcase, FaFileContract, FaExchangeAlt, FaFileAlt,
   FaAngleUp, FaAngleDown, FaSignOutAlt, FaUserEdit,
-  FaMoneyBill
+  FaMoneyBill ,FaWallet
 } from 'react-icons/fa';
 import { Link, useLocation, useNavigate } from 'react-router-dom'; // Import useNavigate
 
@@ -29,6 +29,7 @@ const TestSidebar = () => {
     { id: "Recrutements", icon: <FaBriefcase />, text: "Recrutements", route: "/admin/recrutements" },
     { id: "AttestationTypes", icon: <FaFileAlt />, text: "Attestations.", route: "/admin/attestations" },
     { id: "primes", icon: <FaMoneyBill />, text: "Primes", route: "/admin/primes" },
+    { id: "remboursements", icon: <FaWallet />, text: "remboursements", route: "/admin/remboursements" },
   ];
 
   const getActiveItem = () => {
